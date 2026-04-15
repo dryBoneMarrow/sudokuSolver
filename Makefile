@@ -1,8 +1,20 @@
-all: main.c
-	gcc main.c -o main
-run: main.c
-	gcc main.c -o main
-	./main
-clean:
-	rm main
+CC = gcc
+CFLAGS = -std=c23 -O3 -march=native
+CFLAGS_DEBUG = -std=c23 -g -Wall -Wextra -Wpedantic -fsanitize=address -D DEBUG
 
+all: main.c
+	$(CC) main.c -o main $(CFLAGS)
+
+all_debug: main.c
+	$(CC) main.c -o main_debug $(CFLAGS_DEBUG)
+
+run: all
+	./main
+
+run_debug: all_debug
+	./main_debug
+
+clean:
+	rm -f main main_debug
+
+.PHONY: all all_debug run run_debug clean
