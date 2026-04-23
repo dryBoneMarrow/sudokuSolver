@@ -4,11 +4,24 @@
 #define GO_RIGHT(pos, offset) (pos = ((pos) + 1) % 9 + 9 * (offset))
 #define GO_DOWN(pos) ((pos) = ((pos) + 9) % 81)
 
+#define ESC "\x1B"
+#define CSI ESC "["
+
+#define BOLDD CSI "1m%d" CSI "0m"
+#define FAINTD CSI "2m%d" CSI "0m"
+
+#define CUR_GO_UP CSI "%dA"
+#define CUR_GO_DOWN CSI "%dB"
+#define CUR_GO_RIGHT CSI "%dC"
+#define CUR_GO_LEFT CSI "%dD"
+// Those are private sequences, hopefully they work
+#define CUR_SAVE_POSITION CSI "s"
+#define CUR_RESTORE_POSITION CSI "u"
+
 typedef struct {
     bool determined;
     union {
         int number;
-        // bool candidate[9];
         unsigned _BitInt(9) candidates;
     };
 } Grid[81];
@@ -47,6 +60,64 @@ void printGrid(Grid* g)
         // to save space
 blobbyGlobi(g,0),blobbyGlobi(g,1),blobbyGlobi(g,2),blobbyGlobi(g,3),blobbyGlobi(g,4),blobbyGlobi(g,5),blobbyGlobi(g,6),blobbyGlobi(g,7),blobbyGlobi(g,8),blobbyGlobi(g,9),blobbyGlobi(g,10),blobbyGlobi(g,11),blobbyGlobi(g,12),blobbyGlobi(g,13),blobbyGlobi(g,14),blobbyGlobi(g,15),blobbyGlobi(g,16),blobbyGlobi(g,17),blobbyGlobi(g,18),blobbyGlobi(g,19),blobbyGlobi(g,20),blobbyGlobi(g,21),blobbyGlobi(g,22),blobbyGlobi(g,23),blobbyGlobi(g,24),blobbyGlobi(g,25),blobbyGlobi(g,26),blobbyGlobi(g,27),blobbyGlobi(g,28),blobbyGlobi(g,29),blobbyGlobi(g,30),blobbyGlobi(g,31),blobbyGlobi(g,32),blobbyGlobi(g,33),blobbyGlobi(g,34),blobbyGlobi(g,35),blobbyGlobi(g,36),blobbyGlobi(g,37),blobbyGlobi(g,38),blobbyGlobi(g,39),blobbyGlobi(g,40),blobbyGlobi(g,41),blobbyGlobi(g,42),blobbyGlobi(g,43),blobbyGlobi(g,44),blobbyGlobi(g,45),blobbyGlobi(g,46),blobbyGlobi(g,47),blobbyGlobi(g,48),blobbyGlobi(g,49),blobbyGlobi(g,50),blobbyGlobi(g,51),blobbyGlobi(g,52),blobbyGlobi(g,53),blobbyGlobi(g,54),blobbyGlobi(g,55),blobbyGlobi(g,56),blobbyGlobi(g,57),blobbyGlobi(g,58),blobbyGlobi(g,59),blobbyGlobi(g,60),blobbyGlobi(g,61),blobbyGlobi(g,62),blobbyGlobi(g,63),blobbyGlobi(g,64),blobbyGlobi(g,65),blobbyGlobi(g,66),blobbyGlobi(g,67),blobbyGlobi(g,68),blobbyGlobi(g,69),blobbyGlobi(g,70),blobbyGlobi(g,71),blobbyGlobi(g,72),blobbyGlobi(g,73),blobbyGlobi(g,74),blobbyGlobi(g,75),blobbyGlobi(g,76),blobbyGlobi(g,77),blobbyGlobi(g,78),blobbyGlobi(g,79),blobbyGlobi(g,80));}
 // clang-format on
+
+// For the grid to be filled properly the terminal has to be as big (particularly as high) as the
+// grid itself (wontfix because debug only)
+void printBigGrid(Grid* grid)
+{
+    int i;
+
+    printf(CUR_SAVE_POSITION);
+
+    // Storing the whole string in one line would result in a stack overflow (string literal max ist
+    // 4095 in C23)
+    static char topLine[]
+        = "╭───────┬───────┬───────┰───────┬───────┬───────┰───────┬───────┬───────╮\n";
+    static char insideField[]
+        = "│       │       │       ┃       │       │       ┃       │       │       │\n";
+    static char fieldSeperator[]
+        = "├───────┼───────┼───────╂───────┼───────┼───────╂───────┼───────┼───────┤\n";
+    static char fatFieldSeperator[]
+        = "┝━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━┥\n";
+    static char bottomLine[]
+        = "╰───────┴───────┴───────┸───────┴───────┴───────┸───────┴───────┴───────╯\n";
+
+    printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s", topLine,
+        insideField, insideField, insideField, fieldSeperator, insideField, insideField,
+        insideField, fieldSeperator, insideField, insideField, insideField, fatFieldSeperator,
+        insideField, insideField, insideField, fieldSeperator, insideField, insideField,
+        insideField, fieldSeperator, insideField, insideField, insideField, fatFieldSeperator,
+        insideField, insideField, insideField, fieldSeperator, insideField, insideField,
+        insideField, fieldSeperator, insideField, insideField, insideField, bottomLine);
+
+    printf(CUR_SAVE_POSITION);
+    for (i = 0; i < 81; i++) {
+        printf(CUR_RESTORE_POSITION);
+        printf(CUR_GO_UP, 35 - (int)(i / 9) * 4);
+        printf(CUR_GO_RIGHT, 4 + (i % 9) * 8);
+        if ((*grid)[i].determined)
+            printf(BOLDD, (*grid)[i].number);
+        else {
+            if ((*grid)[i].candidates & 1 << 0)
+                printf(CUR_GO_UP CUR_GO_LEFT FAINTD CUR_GO_DOWN CUR_GO_RIGHT, 1, 2, 1, 1, 1);
+            if ((*grid)[i].candidates & 1 << 1)
+                printf(CUR_GO_UP FAINTD CUR_GO_DOWN CUR_GO_LEFT, 1, 2, 1, 1);
+            if ((*grid)[i].candidates & 1 << 2)
+                printf(CUR_GO_UP CUR_GO_RIGHT FAINTD CUR_GO_DOWN CUR_GO_LEFT, 1, 2, 3, 1, 3);
+            if ((*grid)[i].candidates & 1 << 3) printf(CUR_GO_LEFT FAINTD CUR_GO_RIGHT, 2, 4, 1);
+            if ((*grid)[i].candidates & 1 << 4) printf(FAINTD CUR_GO_LEFT, 5, 1);
+            if ((*grid)[i].candidates & 1 << 5) printf(CUR_GO_RIGHT FAINTD CUR_GO_LEFT, 2, 6, 3);
+            if ((*grid)[i].candidates & 1 << 6)
+                printf(CUR_GO_DOWN CUR_GO_LEFT FAINTD CUR_GO_UP CUR_GO_RIGHT, 1, 2, 7, 1, 1);
+            if ((*grid)[i].candidates & 1 << 7)
+                printf(CUR_GO_DOWN FAINTD CUR_GO_UP CUR_GO_LEFT, 1, 8, 1, 1);
+            if ((*grid)[i].candidates & 1 << 8)
+                printf(CUR_GO_DOWN CUR_GO_RIGHT FAINTD CUR_GO_UP CUR_GO_LEFT, 1, 2, 9, 1, 3);
+        }
+    }
+    printf(CUR_RESTORE_POSITION);
+}
+
 #endif
 
 bool cleanRow(Grid* grid, const int row)
@@ -165,46 +236,52 @@ void solve(Grid* grid)
             if (!(*grid)[i].determined && stdc_has_single_bit((*grid)[i].candidates)) {
                 (*grid)[i].determined = true;
                 (*grid)[i].number = stdc_first_trailing_one((*grid)[i].candidates);
-#ifdef DEBUG
-                fprintf(stderr, "%dx%d: %d\n", i % 9 + 1, i / 9 + 1, (*grid)[i].number);
-#endif
+                // #ifdef DEBUG
+                // fprintf(stderr, "%dx%d: %d\n", i % 9 + 1, i / 9 + 1, (*grid)[i].number);
+                // #endif
             }
         }
 
-#ifdef DEBUG
-        printGrid(grid);
-#endif
+        // #ifdef DEBUG
+        //         printGrid(grid);
+        // #endif
     } while (hasChanged);
 }
 
 int main()
 {
-    Grid grid;
-    int i;
-
-    //// Parse input
-
-    // TODO Temporarily, afterward receive sudoku from stdin
-#ifdef STATICTESTPUZZLE
-    int testPuzzle[81] = { 4, 6, 7, 1, 0, 0, 8, 0, 5, 9, 1, 2, 8, 3, 5, 6, 0, 7, 0, 8, 5, 6, 4, 7,
-        1, 9, 2, 2, 9, 6, 3, 5, 1, 4, 7, 0, 7, 0, 8, 9, 2, 0, 3, 5, 1, 5, 3, 1, 4, 0, 8, 9, 2, 6, 0,
-        7, 3, 0, 6, 4, 5, 1, 0, 6, 2, 4, 5, 1, 9, 7, 8, 3, 1, 5, 9, 7, 8, 3, 0, 6, 4 };
-
-    for (i = 0; i < 81; i++) {
-        if (testPuzzle[i]) {
-            grid[i].determined = true;
-            grid[i].number = testPuzzle[i];
-        } else {
-            grid[i].determined = false;
-            grid[i].candidates = ~0;
-        }
-    }
-#endif
-
+// #ifdef DEBUG
+//     printBigGrid(nullptr);
+// #endif
 #ifdef DEBUG
-    printGrid(&grid);
-#endif
+    Grid grid;
+    FILE* puzzleInput = fopen("easy.txt", "r");
+    int i, j, k, currNum;
 
-    //// Solve
-    solve(&grid);
+    for (i = 0; i < 100; i++) {
+        for (j = 0; j < 81; j++) {
+            currNum = getc(puzzleInput) - '0';
+            if (currNum) {
+                grid[j].determined = true;
+                grid[j].number = currNum;
+            } else {
+                grid[j].determined = false;
+                grid[j].candidates = ~0;
+            }
+        }
+
+        printBigGrid(&grid);
+        solve(&grid);
+        printBigGrid(&grid);
+        for (k = 0; k < 81; k++) {
+            if (!grid[k].determined) goto home;
+        }
+
+        fgetc(puzzleInput);
+    }
+home:
+
+//// Solve
+// solve(&grid);
+#endif
 }
