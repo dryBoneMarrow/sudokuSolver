@@ -1,13 +1,12 @@
 CC = gcc
 CFLAGS = -std=c23 -O3 -march=native
 CFLAGS_DEBUG = -std=c23 -g -Wall -Wextra -Wpedantic -fsanitize=address -D DEBUG
-# CFLAGS_DEBUG = -std=c23 -g -Wall -fsanitize=address -D DEBUG
 
 all: main.c
-	$(CC) main.c -o main $(CFLAGS)
+	$(CC) *.c -o main $(CFLAGS)
 
 all_debug: main.c
-	$(CC) main.c -o main_debug $(CFLAGS_DEBUG)
+	$(CC) *.c -o main_debug $(CFLAGS_DEBUG)
 
 run: all
 	./main
