@@ -173,6 +173,82 @@ bool candidateOnlyInOneCellOfHouse(Grid grid)
     return somethingChanged;
 }
 
+// If a certain candidate is only in a {column,row} inside a subgrid, remove it from the whole rest
+// of the {column,row}
+// https://www.sudokuwiki.org/Intersection_Removal
+bool intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
+{
+    bool somethingChanged = false;
+    int i, j, k, l;
+    for (i = 0; i < 9; i++) {
+        // j is the current row / column inside the subgrid
+        for (j = 0; j < 3; j++) {
+            // subHouse refers to a part of a column / row that is in a particular subgrid
+            unsigned _BitInt(9) possiblyOnlyInSubHouse[2] = { };
+            // Collect all candidates in current sub house
+            // k is the current cell in the current sub house
+            for (k = 0; k < 3; k++) {
+                // Row
+                if (!currSubgridPos(i, k + 3 * j).determined) {
+                    possiblyOnlyInSubHouse[ROW] |= currSubgridPos(i, k + 3 * j).candidates;
+                }
+
+                // Column
+                if (!currSubgridPos(i, 3 * k + j).determined) {
+                    possiblyOnlyInSubHouse[COLUMN] |= currSubgridPos(i, 3 * k + j).candidates;
+                }
+            }
+            // Remove possible candidates that are outside of sub house
+            for (k = 1; k < 3; k++) {
+                for (l = 0; l < 3; l++) {
+                    // Row
+                    if (!currSubgridPos(i, 3 * ((k + j) % 3) + l).determined) {
+                        possiblyOnlyInSubHouse[ROW]
+                            &= ~currSubgridPos(i, 3 * ((k + j) % 3) + l).candidates;
+                    }
+
+                    // Column
+                    if (!currSubgridPos(i, (k + j) % 3 + l * 3).determined) {
+                        possiblyOnlyInSubHouse[COLUMN]
+                            &= ~currSubgridPos(i, (k + j) % 3 + l * 3).candidates;
+                    }
+                }
+            }
+
+            // Now we have all candidates that are indeed only in the subhouse, we can remove those
+            // from every othe cell in the row / column
+
+            if (possiblyOnlyInSubHouse[ROW]) {
+                int rowNumber = i / 3 * 3 + j;
+                for (k = 0; k < 9; k++) {
+                    if (i % 3 * 3 <= k && k < i % 3 * 3 + 3) continue;
+                    if (!currRowPos(rowNumber, k).determined) {
+                        // ?? Wieso hier kein compiler geheule wegen sequence points ??
+                        if (currRowPos(rowNumber, k).candidates
+                            != (currRowPos(rowNumber, k).candidates
+                                &= ~possiblyOnlyInSubHouse[ROW]))
+                            somethingChanged = true;
+                    }
+                }
+            }
+
+            if (possiblyOnlyInSubHouse[COLUMN]) {
+                int columnNumber = i % 3 * 3 + j;
+                for (k = 0; k < 9; k++) {
+                    if (i / 3 * 3 <= k && k < i / 3 * 3 + 3) continue;
+                    if (!currColumnPos(columnNumber, k).determined) {
+                        if (currColumnPos(columnNumber, k).candidates
+                            != (currColumnPos(columnNumber, k).candidates
+                                &= ~possiblyOnlyInSubHouse[COLUMN]))
+                            somethingChanged = true;
+                    }
+                }
+            }
+        }
+    }
+    return somethingChanged;
+}
+
 // Changes cells with only one candidates to determined
 bool singleCandidateToDeterminedPass(Grid grid)
 {
@@ -195,6 +271,7 @@ bool isGridInvalidPass(Grid grid)
     for (i = 0; i < 9; i++) {
         unsigned _BitInt(9) foundNumbers[3] = { };
         for (j = 0; j < 9; j++) {
+            // Invalid if number occurs twice in house
             if (currRowPos(i, j).determined)
                 if (foundNumbers[ROW] == (foundNumbers[ROW] |= 1 << (currRowPos(i, j).number - 1)))
                     return true;
@@ -208,6 +285,9 @@ bool isGridInvalidPass(Grid grid)
                 if (foundNumbers[SUBGRID]
                     == (foundNumbers[SUBGRID] |= 1 << (currSubgridPos(i, j).number - 1)))
                     return true;
+
+            // Invalid if cell has no candidates left
+            if (!grid[i * j].determined && !grid[i * j].candidates) return true;
         }
     }
     return false;
@@ -223,7 +303,10 @@ int runAllPasses(Grid grid)
     int madeProgress = false;
     madeProgress |= simpleCleanPass(grid);
     madeProgress |= candidateOnlyInOneCellOfHouse(grid);
+    madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
+    // TODO at least twins and triplets
+    // Also intersection removal type 2
     // [...]
 
     // Special pass with different return code interpretation

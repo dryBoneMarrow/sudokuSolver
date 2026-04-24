@@ -7,12 +7,13 @@ int main()
     Grid grid, originalCopy;
     // FILE* puzzleInput = fopen("easy.txt", "r");
     FILE* puzzleInput = fopen("medium.txt", "r");
-    int i, j, currNum;
+    int i, j, currNum, unsolvedCounter = 0;
     int madeProgress = false;
+    bool firstUnsolved = true;
 
     // TODO backtrack approach (e.g. array of grids)
 
-    // Read first 100 problems
+    // Read problems
     for (i = 0; true; i++) {
         // Parse problem
         for (j = 0; j < 81; j++) {
@@ -26,7 +27,7 @@ int main()
             }
         }
 
-        // Copy grid before solving for debugging
+        // Copy grid before solving
         for (j = 0; j < 81; j++) {
             originalCopy[j].determined = grid[j].determined;
             originalCopy[j].number = grid[j].number;
@@ -40,28 +41,37 @@ int main()
 
         // Exit early if problem is invalid
         if (madeProgress < 0) {
-            printf("Problem Nr. %d got into a broken state\n", i + 1);
             printGrid(originalCopy);
-            goto home;
+            printGrid(grid);
+            printf("Problem Nr. %d got into a broken state\n", i + 1);
+            goto exit;
         }
 
-        // Exit early if problem isn't solved
+        // Check whether problem has been solved
         for (j = 0; j < 81; j++) {
             if (!grid[j].determined) {
-                printf("Couldn't solve Nr. %d\n", i + 1);
-                printGrid(originalCopy);
-                goto home;
-                // break;
+                if (firstUnsolved) {
+                    printGrid(originalCopy);
+                    printGrid(grid);
+                    printf("Couldn't solve Nr. %d\n", i + 1);
+                    firstUnsolved = false;
+                    fflush(stdout);
+                }
+                unsolvedCounter++;
+                break;
             }
         }
 
         // Newline
         fgetc(puzzleInput);
         if ((currNum = fgetc(puzzleInput)) == EOF) break;
-        // ungetc instead of fseek because stdin (NAME?) will work
+        // ungetc instead of fseek because stdin will work
         else
             ungetc(currNum, puzzleInput);
     }
-home:
-    printGrid(grid);
+    // Correct counter for statistics
+    i++;
+    printf(
+        "%d/%d (%.2f%%) solved\n", i - unsolvedCounter, i, (double)(i - unsolvedCounter) / i * 100);
+exit:
 }
