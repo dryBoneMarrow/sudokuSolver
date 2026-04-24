@@ -1,4 +1,4 @@
-Easy: 100000/100000 (100.00%) solved
-Medium: 347429/352643 (98.52%) solved
-Hard: 81580/321592 (25.37%) solved
-Diabolical: 0/119681 (0.00%) solved
+Easy:       100000/100000 (100.00%) solved
+Medium:     352643/352643 (100.00%) solved
+Hard:       125048/321592 ( 38.88%) solved
+Diabolical:    135/119681 (  0.11%) solved
