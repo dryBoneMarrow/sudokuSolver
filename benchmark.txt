@@ -1,0 +1,4 @@
+Easy: 100000/100000 (100.00%) solved
+Medium: 347429/352643 (98.52%) solved
+Hard: 81580/321592 (25.37%) solved
+Diabolical: 0/119681 (0.00%) solved

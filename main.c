@@ -7,6 +7,8 @@ int main()
     Grid grid, originalCopy;
     // FILE* puzzleInput = fopen("easy.txt", "r");
     FILE* puzzleInput = fopen("medium.txt", "r");
+    // FILE* puzzleInput = fopen("hard.txt", "r");
+    // FILE* puzzleInput = fopen("diabolical.txt", "r");
     int i, j, currNum, unsolvedCounter = 0;
     int madeProgress = false;
     bool firstUnsolved = true;
