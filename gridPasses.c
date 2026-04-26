@@ -2,6 +2,13 @@
 
 #include "sudoku.h"
 
+///
+/// Every basic solving strategy from sudokuwiki.org has been implemented completely
+///
+/// Efficiency was considered during implementation, still the algorithms aren't trimmed to be as
+/// fast as humanly possible
+///
+
 // Macros for readability
 #define currRowPos(houseNr, posInHouse) grid[rowToIndex(houseNr, posInHouse)]
 #define currColumnPos(houseNr, posInHouse) grid[columnToIndex(houseNr, posInHouse)]
@@ -31,7 +38,7 @@ int subgridToIndex(int subgrid, int pos)
 enum house { ROW, COLUMN, SUBGRID };
 
 // TODO most passes were written before they could report sudoku invalidity, performance would be
-// better if we'd catch the earlier (thus already in those passes)
+// better if we'd catch the earlier (thus already in those passes) for backtracking
 
 //// Removes obvious non-candidates
 // e.g.: if 7 is already in the row, remove it as candidates in undetermined cells of this row
@@ -1081,10 +1088,6 @@ int runAllPasses(Grid grid)
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
     madeProgress |= isGridValidPass(grid);
-    // TODO
-    // - hidden pair -> done
-    // - hidden triplet -> wip
-    // - hidden quad
     // [...]
 
     return madeProgress;
@@ -1108,10 +1111,6 @@ int runCheapPasses(Grid grid)
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
     madeProgress |= isGridValidPass(grid);
-    // TODO
-    // - hidden pair -> done
-    // - hidden triplet -> wip
-    // - hidden quad
     // [...]
 
     return madeProgress;

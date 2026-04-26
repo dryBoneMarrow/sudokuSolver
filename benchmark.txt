@@ -1,3 +1,4 @@
+Without backtracking:
 Easy:       100000/100000 (100.00%) solved
 Medium:     352643/352643 (100.00%) solved
 Hard:       140921/321592 ( 43.82%) solved

@@ -2,76 +2,74 @@
 
 #include "sudoku.h"
 
+// Expects a stream with 81 digits, moves fp
+void parseProblem(FILE* input, Grid grid)
+{
+    // Parse problem
+    int j, currNum;
+    for (j = 0; j < 81; j++) {
+        currNum = getc(input) - '0';
+        if (currNum) {
+            grid[j].determined = true;
+            grid[j].number = currNum;
+        } else {
+            grid[j].determined = false;
+            grid[j].candidates = ~0;
+        }
+    }
+}
+
 int main()
 {
-    Grid grid, originalCopy;
+    Grid grid, gridCopy;
     // FILE* puzzleInput = fopen("easy.txt", "r");
     // FILE* puzzleInput = fopen("medium.txt", "r");
-    // FILE* puzzleInput = fopen("hard.txt", "r");
-    FILE* puzzleInput = fopen("diabolical.txt", "r");
-    int i, j, currNum, unsolvedCounter = 0;
-    int madeProgress = false;
+    FILE* puzzleInput = fopen("hard.txt", "r");
+    // FILE* puzzleInput = fopen("diabolical.txt", "r");
+    int i, j, newlineOrEOF, unsolvedCounter = 0;
+    int isSolved;
     bool firstUnsolved = true;
-
-    // TODO backtrack approach (e.g. array of grids)
 
     // Read problems
     for (i = 0; true; i++) {
-        // Parse problem
-        for (j = 0; j < 81; j++) {
-            currNum = getc(puzzleInput) - '0';
-            if (currNum) {
-                grid[j].determined = true;
-                grid[j].number = currNum;
-            } else {
-                grid[j].determined = false;
-                grid[j].candidates = ~0;
-            }
-        }
+        parseProblem(puzzleInput, grid);
 
         // Copy grid before solving
         for (j = 0; j < 81; j++) {
-            originalCopy[j].determined = grid[j].determined;
-            originalCopy[j].number = grid[j].number;
-            originalCopy[j].candidates = 0;
+            gridCopy[j].determined = grid[j].determined;
+            gridCopy[j].number = grid[j].number;
+            gridCopy[j].candidates = 0;
         }
 
         // Solve problem
-        do {
-            if (!(madeProgress = runCheapPasses(grid))) {
-                madeProgress = runAllPasses(grid);
-            }
-        } while (madeProgress > 0);
+        isSolved = backtrackSolve(grid);
 
-        // Exit early if problem is invalid
-        if (madeProgress < 0) {
-            printGrid(originalCopy);
+        // Exit early if problem is invalid (hopefully problem was invalid from the beginning)
+        if (isSolved < 0) {
+            printGrid(gridCopy);
             printGrid(grid);
             printf("Problem Nr. %d got into a broken state\n", i + 1);
             goto exit;
         }
 
         // Check whether problem has been solved
-        for (j = 0; j < 81; j++) {
-            if (!grid[j].determined) {
-                if (firstUnsolved) {
-                    printGrid(originalCopy);
-                    printGrid(grid);
-                    printf("Couldn't solve Nr. %d\n", i + 1);
-                    firstUnsolved = false;
-                    fflush(stdout);
-                }
-                unsolvedCounter++;
-                break;
+        if (!isSolved) {
+            if (firstUnsolved) {
+                printGrid(gridCopy);
+                printGrid(grid);
+                printf("Couldn't solve Nr. %d\n", i + 1);
+                firstUnsolved = false;
+                fflush(stdout);
             }
+            unsolvedCounter++;
         }
 
         // Newline
         fgetc(puzzleInput);
-        if ((currNum = fgetc(puzzleInput)) == EOF) break;
+        if ((newlineOrEOF = fgetc(puzzleInput)) == EOF) break;
         // ungetc instead of fseek because stdin will work
         else
-            ungetc(currNum, puzzleInput);
+            ungetc(newlineOrEOF, puzzleInput);
     }
     // Correct counter for statistics
     i++;
