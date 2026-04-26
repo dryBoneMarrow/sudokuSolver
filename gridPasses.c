@@ -1088,6 +1088,7 @@ int runAllPasses(Grid grid)
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
     madeProgress |= isGridValidPass(grid);
+    // TODO
     // [...]
 
     return madeProgress;

@@ -1,6 +1,8 @@
 #ifndef _SUDOKU_H
 #define _SUDOKU_H
 
+#include <stdio.h>
+
 typedef struct {
     bool determined;
     // union {
@@ -9,9 +11,9 @@ typedef struct {
     // };
 } Grid[81];
 
-void printGrid(Grid grid);
+void printGrid(Grid grid, bool compact, FILE* output);
 
-int backtrackSolve(Grid grid);
+int backtrackSolve(Grid* grid);
 
 int runAllPasses(Grid grid);
 int runCheapPasses(Grid grid);

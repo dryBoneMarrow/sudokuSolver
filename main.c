@@ -21,33 +21,36 @@ void parseProblem(FILE* input, Grid grid)
 
 int main()
 {
-    Grid grid, gridCopy;
+    Grid grid[64], gridCopy;
     // FILE* puzzleInput = fopen("easy.txt", "r");
     // FILE* puzzleInput = fopen("medium.txt", "r");
-    FILE* puzzleInput = fopen("hard.txt", "r");
-    // FILE* puzzleInput = fopen("diabolical.txt", "r");
+    // FILE* puzzleInput = fopen("hard.txt", "r");
+    FILE* puzzleInput = fopen("diabolical.txt", "r");
     int i, j, newlineOrEOF, unsolvedCounter = 0;
     int isSolved;
     bool firstUnsolved = true;
 
     // Read problems
+    puts("\x1B[?25l");
     for (i = 0; true; i++) {
-        parseProblem(puzzleInput, grid);
+        parseProblem(puzzleInput, grid[0]);
 
         // Copy grid before solving
         for (j = 0; j < 81; j++) {
-            gridCopy[j].determined = grid[j].determined;
-            gridCopy[j].number = grid[j].number;
+            gridCopy[j].determined = grid[0][j].determined;
+            gridCopy[j].number = grid[0][j].number;
             gridCopy[j].candidates = 0;
         }
 
         // Solve problem
         isSolved = backtrackSolve(grid);
 
+        // TODO check whether originally fixed numbers have been modified
+
         // Exit early if problem is invalid (hopefully problem was invalid from the beginning)
         if (isSolved < 0) {
-            printGrid(gridCopy);
-            printGrid(grid);
+            printGrid(gridCopy, false, stdout);
+            printGrid(grid[0], false, stdout);
             printf("Problem Nr. %d got into a broken state\n", i + 1);
             goto exit;
         }
@@ -55,8 +58,8 @@ int main()
         // Check whether problem has been solved
         if (!isSolved) {
             if (firstUnsolved) {
-                printGrid(gridCopy);
-                printGrid(grid);
+                printGrid(gridCopy, false, stdout);
+                printGrid(grid[0], false, stdout);
                 printf("Couldn't solve Nr. %d\n", i + 1);
                 firstUnsolved = false;
                 fflush(stdout);
@@ -70,7 +73,9 @@ int main()
         // ungetc instead of fseek because stdin will work
         else
             ungetc(newlineOrEOF, puzzleInput);
+        // printf("\r%d", i);
     }
+    puts("\x1B[?25h");
     // Correct counter for statistics
     i++;
     printf(
