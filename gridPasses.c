@@ -30,9 +30,12 @@ int subgridToIndex(int subgrid, int pos)
 
 enum house { ROW, COLUMN, SUBGRID };
 
+// TODO most passes were written before they could report sudoku invalidity, performance would be
+// better if we'd catch the earlier (thus already in those passes)
+
 //// Removes obvious non-candidates
 // e.g.: if 7 is already in the row, remove it as candidates in undetermined cells of this row
-bool simpleCleanPass(Grid grid)
+int simpleCleanPass(Grid grid)
 {
     bool somethingChanged = false;
 
@@ -71,7 +74,7 @@ bool simpleCleanPass(Grid grid)
 }
 
 // Find candidates that only occur once in a house
-bool candidateOnlyInOneCellOfHouse(Grid grid)
+int candidateOnlyInOneCellOfHouse(Grid grid)
 {
     bool somethingChanged = false;
 
@@ -177,7 +180,7 @@ bool candidateOnlyInOneCellOfHouse(Grid grid)
 // A naked pair is when two cells of a house _only_ have the same two candidates
 // Approach in nakedTripletPass is more elegant imo, but I'll keep this because it is completely
 // human made
-bool nakedPairsPass(Grid grid)
+int nakedPairsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l;
@@ -252,7 +255,7 @@ bool nakedPairsPass(Grid grid)
 
 // Same as naked pair but for three (thus possible that a cell only contains a subset of this)
 // Disclaimer: rough outline / approach from Claude AI (contrary to other passes)
-bool nakedTripletsPass(Grid grid)
+int nakedTripletsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l, m;
@@ -343,7 +346,7 @@ bool nakedTripletsPass(Grid grid)
 
 // Same as naked triplet but for four (thus possible that a cell only contains a subset of this)
 // Disclaimer: rough outline / approach from Claude AI (contrary to other passes)
-bool nakedQuadsPass(Grid grid)
+int nakedQuadsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l, m, n;
@@ -460,7 +463,7 @@ bool nakedQuadsPass(Grid grid)
 // A hidden pair is when two candidates are only in two cells, but those cells also contain more
 // candidates
 // https://www.sudokuwiki.org/Hidden_Candidates
-bool hiddenPairsPass(Grid grid)
+int hiddenPairsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l;
@@ -477,7 +480,7 @@ bool hiddenPairsPass(Grid grid)
                     // Pair isn't possible if one of it's numbers is already fixed
                     if (currRowPos(i, l).determined
                         && (currRowPos(i, l).number == j || currRowPos(i, l).number == k))
-                        goto skipPairRow;
+                        goto skipHiddenPairRow;
 
                     // Skip determined cells
                     if (currRowPos(i, l).determined) continue;
@@ -487,7 +490,7 @@ bool hiddenPairsPass(Grid grid)
                             && !(currRowPos(i, l).candidates & (1 << (k - 1))))
                         || (currRowPos(i, l).candidates & (1 << (k - 1))
                             && !(currRowPos(i, l).candidates & (1 << (j - 1)))))
-                        goto skipPairRow;
+                        goto skipHiddenPairRow;
 
                     // Check if pair is present in cell
                     if ((currRowPos(i, l).candidates & ((1 << (j - 1)) | (1 << (k - 1))))
@@ -504,14 +507,14 @@ bool hiddenPairsPass(Grid grid)
                             somethingChanged = true;
                     }
                 }
-            skipPairRow:
+            skipHiddenPairRow:
 
                 // Column
                 for (l = 0; l < 9; l++) {
                     // Pair isn't possible if one of it's numbers is already fixed
                     if (currColumnPos(i, l).determined
                         && (currColumnPos(i, l).number == j || currColumnPos(i, l).number == k))
-                        goto skipPairColumn;
+                        goto skipHiddenPairColumn;
 
                     // Skip determined cells
                     if (currColumnPos(i, l).determined) continue;
@@ -521,7 +524,7 @@ bool hiddenPairsPass(Grid grid)
                             && !(currColumnPos(i, l).candidates & (1 << (k - 1))))
                         || (currColumnPos(i, l).candidates & (1 << (k - 1))
                             && !(currColumnPos(i, l).candidates & (1 << (j - 1)))))
-                        goto skipPairColumn;
+                        goto skipHiddenPairColumn;
 
                     // Check if pair is present in cell
                     if ((currColumnPos(i, l).candidates & ((1 << (j - 1)) | (1 << (k - 1))))
@@ -538,14 +541,14 @@ bool hiddenPairsPass(Grid grid)
                             somethingChanged = true;
                     }
                 }
-            skipPairColumn:
+            skipHiddenPairColumn:
 
                 // Subgrid
                 for (l = 0; l < 9; l++) {
                     // Pair isn't possible if one of it's numbers is already fixed
                     if (currSubgridPos(i, l).determined
                         && (currSubgridPos(i, l).number == j || currSubgridPos(i, l).number == k))
-                        goto skipPairSubgrid;
+                        goto skipHiddenPairSubgrid;
 
                     // Skip determined cells
                     if (currSubgridPos(i, l).determined) continue;
@@ -555,7 +558,7 @@ bool hiddenPairsPass(Grid grid)
                             && !(currSubgridPos(i, l).candidates & (1 << (k - 1))))
                         || (currSubgridPos(i, l).candidates & (1 << (k - 1))
                             && !(currSubgridPos(i, l).candidates & (1 << (j - 1)))))
-                        goto skipPairSubgrid;
+                        goto skipHiddenPairSubgrid;
 
                     // Check if pair is present in cell
                     if ((currSubgridPos(i, l).candidates & ((1 << (j - 1)) | (1 << (k - 1))))
@@ -572,23 +575,313 @@ bool hiddenPairsPass(Grid grid)
                             somethingChanged = true;
                     }
                 }
-            skipPairSubgrid:
+            skipHiddenPairSubgrid:
             }
         }
     }
     return somethingChanged;
 }
 
-bool hiddenTripletsPass(Grid grid)
+// see hiddenPair
+int hiddenTripletsPass(Grid grid)
 {
     bool somethingChanged = false;
+    int i, j, k, l, m;
+    // We argue for every house...
+    for (i = 0; i < 9; i++) {
+        // ... why every hidden triple is present or not (the triple being (j,k,l))
+        for (j = 1; j <= 9; j++) {
+            for (k = j + 1; k <= 9; k++) {
+                for (l = k + 1; l <= 9; l++) {
+                    unsigned _BitInt(9) subsetOfTriplePresent[3] = { };
+                    const unsigned _BitInt(9) currentTriplet
+                        = (1 << (j - 1)) | (1 << (k - 1)) | (1 << (l - 1));
+                    unsigned _BitInt(9) currentTripletCopy;
+
+                    // Row
+                    for (m = 0; m < 9; m++) {
+                        // A triple isn't possible if one of it's numbers is already fixed
+                        if (currRowPos(i, m).determined
+                            && (currRowPos(i, m).number == j || currRowPos(i, m).number == k
+                                || currRowPos(i, m).number == l))
+                            goto skipHiddenTripletRow;
+
+                        // Don't need to check detemined cells
+                        if (currRowPos(i, m).determined) continue;
+
+                        // Count number of cells containing subset of triplet
+                        if (currRowPos(i, m).candidates & currentTriplet) {
+                            subsetOfTriplePresent[ROW] |= 1 << m;
+                        }
+                    }
+                    // Subset of trplet has to occur in exactly three cells (less means invalid
+                    // sudoku, more means not a hidden triplet)
+                    if (stdc_count_ones(subsetOfTriplePresent[ROW]) > 3) goto skipHiddenTripletRow;
+                    if (stdc_count_ones(subsetOfTriplePresent[ROW]) < 3) return -1;
+
+                    // Check that all digits of triplet at least once occur
+                    currentTripletCopy = currentTriplet;
+                    for (m = 0; m < 9; m++) {
+                        if (!((1 << m) & subsetOfTriplePresent[ROW])) continue;
+                        currentTripletCopy &= ~currRowPos(i, m).candidates;
+                    }
+                    // Some digit of currently checked triplet is in none of the cells
+                    if (currentTripletCopy) goto skipHiddenTripletRow;
+
+                    // Delete all other candidates from the cells containing the triplet
+                    for (m = 0; m < 9; m++) {
+                        if (!((1 << m) & subsetOfTriplePresent[ROW])) continue;
+                        if (currRowPos(i, m).candidates
+                            != (currRowPos(i, m).candidates &= currentTriplet))
+                            somethingChanged = 1;
+                    }
+
+                skipHiddenTripletRow:
+
+                    // Column
+                    for (m = 0; m < 9; m++) {
+                        // A triple isn't possible if one of it's numbers is already fixed
+                        if (currColumnPos(i, m).determined
+                            && (currColumnPos(i, m).number == j || currColumnPos(i, m).number == k
+                                || currColumnPos(i, m).number == l))
+                            goto skipHiddenTripletColumn;
+
+                        // Don't need to check detemined cells
+                        if (currColumnPos(i, m).determined) continue;
+
+                        // Count number of cells containing subset of triplet
+                        if (currColumnPos(i, m).candidates & currentTriplet) {
+                            subsetOfTriplePresent[COLUMN] |= 1 << m;
+                        }
+                    }
+                    // Subset of trplet has to occur in exactly three cells (less means invalid
+                    // sudoku, more means not a hidden triplet)
+                    if (stdc_count_ones(subsetOfTriplePresent[COLUMN]) > 3)
+                        goto skipHiddenTripletColumn;
+                    if (stdc_count_ones(subsetOfTriplePresent[COLUMN]) < 3) return -1;
+
+                    // Check that all digits of triplet at least once occur
+                    currentTripletCopy = currentTriplet;
+                    for (m = 0; m < 9; m++) {
+                        if (!((1 << m) & subsetOfTriplePresent[COLUMN])) continue;
+                        currentTripletCopy &= ~currColumnPos(i, m).candidates;
+                    }
+                    // Some digit of currently checked triplet is in none of the cells
+                    if (currentTripletCopy) goto skipHiddenTripletColumn;
+
+                    // Delete all other candidates from the cells containing the triplet
+                    for (m = 0; m < 9; m++) {
+                        if (!((1 << m) & subsetOfTriplePresent[COLUMN])) continue;
+                        if (currColumnPos(i, m).candidates
+                            != (currColumnPos(i, m).candidates &= currentTriplet))
+                            somethingChanged = 1;
+                    }
+
+                skipHiddenTripletColumn:
+
+                    // Subgrid
+                    for (m = 0; m < 9; m++) {
+                        // A triple isn't possible if one of it's numbers is already fixed
+                        if (currSubgridPos(i, m).determined
+                            && (currSubgridPos(i, m).number == j || currSubgridPos(i, m).number == k
+                                || currSubgridPos(i, m).number == l))
+                            goto skipHiddenTripletSubgrid;
+
+                        // Don't need to check detemined cells
+                        if (currSubgridPos(i, m).determined) continue;
+
+                        // Count number of cells containing subset of triplet
+                        if (currSubgridPos(i, m).candidates & currentTriplet) {
+                            subsetOfTriplePresent[SUBGRID] |= 1 << m;
+                        }
+                    }
+                    // Subset of trplet has to occur in exactly three cells (less means invalid
+                    // sudoku, more means not a hidden triplet)
+                    if (stdc_count_ones(subsetOfTriplePresent[SUBGRID]) > 3)
+                        goto skipHiddenTripletSubgrid;
+                    if (stdc_count_ones(subsetOfTriplePresent[SUBGRID]) < 3) return -1;
+
+                    // Check that all digits of triplet at least once occur
+                    currentTripletCopy = currentTriplet;
+                    for (m = 0; m < 9; m++) {
+                        if (!((1 << m) & subsetOfTriplePresent[SUBGRID])) continue;
+                        currentTripletCopy &= ~currSubgridPos(i, m).candidates;
+                    }
+                    // Some digit of currently checked triplet is in none of the cells
+                    if (currentTripletCopy) goto skipHiddenTripletSubgrid;
+
+                    // Delete all other candidates from the cells containing the triplet
+                    for (m = 0; m < 9; m++) {
+                        if (!((1 << m) & subsetOfTriplePresent[SUBGRID])) continue;
+                        if (currSubgridPos(i, m).candidates
+                            != (currSubgridPos(i, m).candidates &= currentTriplet))
+                            somethingChanged = 1;
+                    }
+
+                skipHiddenTripletSubgrid:
+                }
+            }
+        }
+    }
+    return somethingChanged;
+}
+
+// see hiddenPair
+int hiddenQuadsPass(Grid grid)
+{
+    bool somethingChanged = false;
+    int i, j, k, l, m, n;
+    // We argue for every house...
+    for (i = 0; i < 9; i++) {
+        // ... why every hidden quad is present or not (the quad being (j,k,l,m))
+        for (j = 1; j <= 9; j++) {
+            for (k = j + 1; k <= 9; k++) {
+                for (l = k + 1; l <= 9; l++) {
+                    for (m = l + 1; m <= 9; m++) {
+
+                        unsigned _BitInt(9) subsetOfQuadPresent[3] = { };
+                        const unsigned _BitInt(9) currentQuad
+                            = (1 << (j - 1)) | (1 << (k - 1)) | (1 << (l - 1)) | (1 << (m - 1));
+                        unsigned _BitInt(9) currentQuadCopy;
+
+                        // Row
+                        for (n = 0; n < 9; n++) {
+                            // A quad isn't possible if one of it's numbers is already fixed
+                            if (currRowPos(i, n).determined
+                                && (currRowPos(i, n).number == j || currRowPos(i, n).number == k
+                                    || currRowPos(i, n).number == l
+                                    || currRowPos(i, n).number == m))
+                                goto skipHiddenQuadRow;
+
+                            // Don't need to check detemined cells
+                            if (currRowPos(i, n).determined) continue;
+
+                            // Count number of cells containing subset of quad
+                            if (currRowPos(i, n).candidates & currentQuad) {
+                                subsetOfQuadPresent[ROW] |= 1 << n;
+                            }
+                        }
+                        // Subset of quad has to occur in exactly four cells (less means invalid
+                        // sudoku, more means not a hidden quad)
+                        if (stdc_count_ones(subsetOfQuadPresent[ROW]) > 4) goto skipHiddenQuadRow;
+                        if (stdc_count_ones(subsetOfQuadPresent[ROW]) < 4) return -1;
+
+                        // Check that all digits of quad at least once occur
+                        currentQuadCopy = currentQuad;
+                        for (n = 0; n < 9; n++) {
+                            if (!((1 << n) & subsetOfQuadPresent[ROW])) continue;
+                            currentQuadCopy &= ~currRowPos(i, n).candidates;
+                        }
+                        // Some digits of currently checked quad are in none of the cells
+                        if (currentQuadCopy) goto skipHiddenQuadRow;
+
+                        // Delete all other candidates from the cells containing the quad
+                        for (n = 0; n < 9; n++) {
+                            if (!((1 << n) & subsetOfQuadPresent[ROW])) continue;
+                            if (currRowPos(i, n).candidates
+                                != (currRowPos(i, n).candidates &= currentQuad))
+                                somethingChanged = 1;
+                        }
+
+                    skipHiddenQuadRow:
+
+                        // Column
+                        for (n = 0; n < 9; n++) {
+                            // A quad isn't possible if one of it's numbers is already fixed
+                            if (currColumnPos(i, n).determined
+                                && (currColumnPos(i, n).number == j
+                                    || currColumnPos(i, n).number == k
+                                    || currColumnPos(i, n).number == l
+                                    || currColumnPos(i, n).number == m))
+                                goto skipHiddenQuadColumn;
+
+                            // Don't need to check detemined cells
+                            if (currColumnPos(i, n).determined) continue;
+
+                            // Count number of cells containing subset of quad
+                            if (currColumnPos(i, n).candidates & currentQuad) {
+                                subsetOfQuadPresent[COLUMN] |= 1 << n;
+                            }
+                        }
+                        // Subset of quad has to occur in exactly four cells (less means invalid
+                        // sudoku, more means not a hidden quad)
+                        if (stdc_count_ones(subsetOfQuadPresent[COLUMN]) > 4)
+                            goto skipHiddenQuadColumn;
+                        if (stdc_count_ones(subsetOfQuadPresent[COLUMN]) < 4) return -1;
+
+                        // Check that all digits of quad at least once occur
+                        currentQuadCopy = currentQuad;
+                        for (n = 0; n < 9; n++) {
+                            if (!((1 << n) & subsetOfQuadPresent[COLUMN])) continue;
+                            currentQuadCopy &= ~currColumnPos(i, n).candidates;
+                        }
+                        // Some digits of currently checked quad are in none of the cells
+                        if (currentQuadCopy) goto skipHiddenQuadColumn;
+
+                        // Delete all other candidates from the cells containing the quad
+                        for (n = 0; n < 9; n++) {
+                            if (!((1 << n) & subsetOfQuadPresent[COLUMN])) continue;
+                            if (currColumnPos(i, n).candidates
+                                != (currColumnPos(i, n).candidates &= currentQuad))
+                                somethingChanged = 1;
+                        }
+
+                    skipHiddenQuadColumn:
+
+                        // Subgrid
+                        for (n = 0; n < 9; n++) {
+                            // A quad isn't possible if one of it's numbers is already fixed
+                            if (currSubgridPos(i, n).determined
+                                && (currSubgridPos(i, n).number == j
+                                    || currSubgridPos(i, n).number == k
+                                    || currSubgridPos(i, n).number == l
+                                    || currSubgridPos(i, n).number == m))
+                                goto skipHiddenQuadSubgrid;
+
+                            // Don't need to check detemined cells
+                            if (currSubgridPos(i, n).determined) continue;
+
+                            // Count number of cells containing subset of quad
+                            if (currSubgridPos(i, n).candidates & currentQuad) {
+                                subsetOfQuadPresent[SUBGRID] |= 1 << n;
+                            }
+                        }
+                        // Subset of quad has to occur in exactly four cells (less means invalid
+                        // sudoku, more means not a hidden quad)
+                        if (stdc_count_ones(subsetOfQuadPresent[SUBGRID]) > 4)
+                            goto skipHiddenQuadSubgrid;
+                        if (stdc_count_ones(subsetOfQuadPresent[SUBGRID]) < 4) return -1;
+
+                        // Check that all digits of quad at least once occur
+                        currentQuadCopy = currentQuad;
+                        for (n = 0; n < 9; n++) {
+                            if (!((1 << n) & subsetOfQuadPresent[SUBGRID])) continue;
+                            currentQuadCopy &= ~currSubgridPos(i, n).candidates;
+                        }
+                        // Some digits of currently checked quad are in none of the cells
+                        if (currentQuadCopy) goto skipHiddenQuadSubgrid;
+
+                        // Delete all other candidates from the cells containing the quad
+                        for (n = 0; n < 9; n++) {
+                            if (!((1 << n) & subsetOfQuadPresent[SUBGRID])) continue;
+                            if (currSubgridPos(i, n).candidates
+                                != (currSubgridPos(i, n).candidates &= currentQuad))
+                                somethingChanged = 1;
+                        }
+
+                    skipHiddenQuadSubgrid:
+                    }
+                }
+            }
+        }
+    }
     return somethingChanged;
 }
 
 // If a certain candidate is only in a {column,row} inside a subgrid, remove it from the whole rest
 // of the {column,row}
 // https://www.sudokuwiki.org/Intersection_Removal
-bool intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
+int intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l;
@@ -662,7 +955,7 @@ bool intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
 }
 
 // https://www.sudokuwiki.org/Intersection_Removal#:~:text=Box%20Line%20Reduction
-bool intersectionRemovalBoxLineReductionPass(Grid grid)
+int intersectionRemovalBoxLineReductionPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k;
@@ -724,7 +1017,7 @@ bool intersectionRemovalBoxLineReductionPass(Grid grid)
 }
 
 // Changes cells with only one candidates to determined
-bool singleCandidateToDeterminedPass(Grid grid)
+int singleCandidateToDeterminedPass(Grid grid)
 {
     int i;
     // Hopefully changes were catched earlier, but we never know
@@ -739,7 +1032,7 @@ bool singleCandidateToDeterminedPass(Grid grid)
     return somethingChanged;
 }
 
-bool isGridInvalidPass(Grid grid)
+int isGridValidPass(Grid grid)
 {
     int i, j;
     for (i = 0; i < 9; i++) {
@@ -748,23 +1041,23 @@ bool isGridInvalidPass(Grid grid)
             // Invalid if number occurs twice in house
             if (currRowPos(i, j).determined)
                 if (foundNumbers[ROW] == (foundNumbers[ROW] |= 1 << (currRowPos(i, j).number - 1)))
-                    return true;
+                    return -1;
 
             if (currColumnPos(i, j).determined)
                 if (foundNumbers[COLUMN]
                     == (foundNumbers[COLUMN] |= 1 << (currColumnPos(i, j).number - 1)))
-                    return true;
+                    return -1;
 
             if (currSubgridPos(i, j).determined)
                 if (foundNumbers[SUBGRID]
                     == (foundNumbers[SUBGRID] |= 1 << (currSubgridPos(i, j).number - 1)))
-                    return true;
+                    return -1;
 
             // Invalid if cell has no candidates left
-            if (!grid[i * 9 + j].determined && !grid[i * 9 + j].candidates) return true;
+            if (!grid[i * 9 + j].determined && !grid[i * 9 + j].candidates) return -1;
         }
     }
-    return false;
+    return 0;
 }
 
 // Runs all passes
@@ -775,6 +1068,7 @@ bool isGridInvalidPass(Grid grid)
 int runAllPasses(Grid grid)
 {
     int madeProgress = false;
+    // Return code of all passes identical with runAllPasses
     madeProgress |= simpleCleanPass(grid);
     madeProgress |= candidateOnlyInOneCellOfHouse(grid);
     madeProgress |= nakedPairsPass(grid);
@@ -782,17 +1076,17 @@ int runAllPasses(Grid grid)
     madeProgress |= nakedQuadsPass(grid);
     madeProgress |= hiddenPairsPass(grid);
     madeProgress |= hiddenTripletsPass(grid);
+    madeProgress |= hiddenQuadsPass(grid);
     madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid);
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
+    madeProgress |= isGridValidPass(grid);
     // TODO
     // - hidden pair -> done
     // - hidden triplet -> wip
     // - hidden quad
     // [...]
 
-    // Special pass with different return code interpretation
-    if (isGridInvalidPass(grid)) madeProgress = -1;
     return madeProgress;
 }
 
@@ -801,6 +1095,7 @@ int runAllPasses(Grid grid)
 int runCheapPasses(Grid grid)
 {
     int madeProgress = false;
+    // Return code of all passes identical with runAllPasses
     madeProgress |= simpleCleanPass(grid);
     madeProgress |= candidateOnlyInOneCellOfHouse(grid);
     // madeProgress |= nakedPairsPass(grid);
@@ -808,16 +1103,16 @@ int runCheapPasses(Grid grid)
     // madeProgress |= nakedQuadsPass(grid);
     // madeProgress |= hiddenPairsPass(grid);
     // madeProgress |= hiddenTripletsPass(grid);
+    // madeProgress |= hiddenQuadsPass(grid);
     madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid);
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
+    madeProgress |= isGridValidPass(grid);
     // TODO
     // - hidden pair -> done
     // - hidden triplet -> wip
     // - hidden quad
     // [...]
 
-    // Special pass with different return code interpretation
-    if (isGridInvalidPass(grid)) madeProgress = -1;
     return madeProgress;
 }
