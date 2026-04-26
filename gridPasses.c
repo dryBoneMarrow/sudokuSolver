@@ -490,8 +490,8 @@ bool hiddenPairsPass(Grid grid)
                         goto skipPairRow;
 
                     // Check if pair is present in cell
-                    if ((currRowPos(i, l).candidates & (1 << (j - 1)) + (1 << (k - 1)))
-                        == (1 << (j - 1)) + (1 << (k - 1)))
+                    if ((currRowPos(i, l).candidates & ((1 << (j - 1)) | (1 << (k - 1))))
+                        == ((1 << (j - 1)) | (1 << (k - 1))))
                         pairLocation[ROW] |= 1 << l;
                 }
                 // A valid pair is found
@@ -524,8 +524,8 @@ bool hiddenPairsPass(Grid grid)
                         goto skipPairColumn;
 
                     // Check if pair is present in cell
-                    if ((currColumnPos(i, l).candidates & (1 << (j - 1)) + (1 << (k - 1)))
-                        == (1 << (j - 1)) + (1 << (k - 1)))
+                    if ((currColumnPos(i, l).candidates & ((1 << (j - 1)) | (1 << (k - 1))))
+                        == ((1 << (j - 1)) | (1 << (k - 1))))
                         pairLocation[COLUMN] |= 1 << l;
                 }
                 // A valid pair is found
@@ -558,8 +558,8 @@ bool hiddenPairsPass(Grid grid)
                         goto skipPairSubgrid;
 
                     // Check if pair is present in cell
-                    if ((currSubgridPos(i, l).candidates & (1 << (j - 1)) + (1 << (k - 1)))
-                        == (1 << (j - 1)) + (1 << (k - 1)))
+                    if ((currSubgridPos(i, l).candidates & ((1 << (j - 1)) | (1 << (k - 1))))
+                        == ((1 << (j - 1)) | (1 << (k - 1))))
                         pairLocation[SUBGRID] |= 1 << l;
                 }
                 // A valid pair is found
@@ -576,6 +576,12 @@ bool hiddenPairsPass(Grid grid)
             }
         }
     }
+    return somethingChanged;
+}
+
+bool hiddenTripletsPass(Grid grid)
+{
+    bool somethingChanged = false;
     return somethingChanged;
 }
 
@@ -655,9 +661,65 @@ bool intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
     return somethingChanged;
 }
 
+// https://www.sudokuwiki.org/Intersection_Removal#:~:text=Box%20Line%20Reduction
 bool intersectionRemovalBoxLineReductionPass(Grid grid)
 {
     bool somethingChanged = false;
+    int i, j, k;
+    // For every line and column
+    for (i = 0; i < 9; i++) {
+        // This variable holds every candidate that is inside of a subgrid the current line or
+        // column
+        unsigned _BitInt(9) candidatesInSubgridAndHouse[2][3] = { };
+        for (j = 0; j < 3; j++) {
+            for (k = 0; k < 3; k++) {
+                if (!currRowPos(i, j * 3 + k).determined)
+                    candidatesInSubgridAndHouse[ROW][j] |= currRowPos(i, j * 3 + k).candidates;
+
+                if (!currColumnPos(i, j * 3 + k).determined)
+                    candidatesInSubgridAndHouse[COLUMN][j]
+                        |= currColumnPos(i, j * 3 + k).candidates;
+            }
+        }
+
+        for (j = 0; j < 3; j++) {
+            unsigned _BitInt(9) numbersOnlyInOneSubgrid[2]
+                = { candidatesInSubgridAndHouse[ROW][j], candidatesInSubgridAndHouse[COLUMN][j] };
+            for (k = 1; k < 3; k++) {
+                numbersOnlyInOneSubgrid[ROW] &= ~candidatesInSubgridAndHouse[ROW][(j + k) % 3];
+                numbersOnlyInOneSubgrid[COLUMN]
+                    &= ~candidatesInSubgridAndHouse[COLUMN][(j + k) % 3];
+            }
+
+            // Row
+            if (numbersOnlyInOneSubgrid[ROW]) {
+                // Remove those numbers as candidates from every other cell in subgrid
+                for (k = 0; k < 9; k++) {
+                    if (k >= i % 3 * 3 && k <= i % 3 * 3 + 2) continue;
+                    if (!currSubgridPos(i / 3 * 3 + j, k).determined) {
+                        if (currSubgridPos(i / 3 * 3 + j, k).candidates
+                            != (currSubgridPos(i / 3 * 3 + j, k).candidates
+                                &= ~numbersOnlyInOneSubgrid[ROW]))
+                            somethingChanged = true;
+                    }
+                }
+            }
+
+            // Column
+            if (numbersOnlyInOneSubgrid[COLUMN]) {
+                // Remove those numbers as candidates from every other cell in subgrid
+                for (k = 0; k < 9; k++) {
+                    if (k == i % 3 || k == i % 3 + 3 || k == i % 3 + 6) continue;
+                    if (!currSubgridPos(j * 3 + i / 3, k).determined) {
+                        if (currSubgridPos(j * 3 + i / 3, k).candidates
+                            != (currSubgridPos(j * 3 + i / 3, k).candidates
+                                &= ~numbersOnlyInOneSubgrid[COLUMN]))
+                            somethingChanged = true;
+                    }
+                }
+            }
+        }
+    }
     return somethingChanged;
 }
 
@@ -719,22 +781,40 @@ int runAllPasses(Grid grid)
     madeProgress |= nakedTripletsPass(grid);
     madeProgress |= nakedQuadsPass(grid);
     madeProgress |= hiddenPairsPass(grid);
+    madeProgress |= hiddenTripletsPass(grid);
     madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid);
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
-    // TODO at least twins and triplets
-    // Also intersection removal type 2
-    //
-    // - Naked pair -> done
-    // - naked triplet -> done
-    // - naked quad -> done
-    // (quints and higher always imply quad or lower thus unnecessary)
-    //
+    // TODO
     // - hidden pair -> done
     // - hidden triplet -> wip
     // - hidden quad
-    //
-    // - intersecion box line reduction -> wip
+    // [...]
+
+    // Special pass with different return code interpretation
+    if (isGridInvalidPass(grid)) madeProgress = -1;
+    return madeProgress;
+}
+
+// Same as run all passes but skips the resource intensive ones (estimate from number of nested
+// loops)
+int runCheapPasses(Grid grid)
+{
+    int madeProgress = false;
+    madeProgress |= simpleCleanPass(grid);
+    madeProgress |= candidateOnlyInOneCellOfHouse(grid);
+    // madeProgress |= nakedPairsPass(grid);
+    // madeProgress |= nakedTripletsPass(grid);
+    // madeProgress |= nakedQuadsPass(grid);
+    // madeProgress |= hiddenPairsPass(grid);
+    // madeProgress |= hiddenTripletsPass(grid);
+    madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid);
+    madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
+    madeProgress |= singleCandidateToDeterminedPass(grid);
+    // TODO
+    // - hidden pair -> done
+    // - hidden triplet -> wip
+    // - hidden quad
     // [...]
 
     // Special pass with different return code interpretation

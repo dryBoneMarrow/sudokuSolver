@@ -12,4 +12,5 @@ typedef struct {
 void printGrid(Grid grid);
 
 int runAllPasses(Grid grid);
+int runCheapPasses(Grid grid);
 #endif

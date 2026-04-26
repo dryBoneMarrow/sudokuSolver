@@ -38,7 +38,9 @@ int main()
 
         // Solve problem
         do {
-            madeProgress = runAllPasses(grid);
+            if (!(madeProgress = runCheapPasses(grid))) {
+                madeProgress = runAllPasses(grid);
+            }
         } while (madeProgress > 0);
 
         // Exit early if problem is invalid
