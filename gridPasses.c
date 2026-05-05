@@ -39,6 +39,9 @@ enum house { ROW, COLUMN, SUBGRID };
 
 // TODO most passes were written before they could report sudoku invalidity, performance would be
 // better if we'd catch the earlier (thus already in those passes) for backtracking
+//
+// Spoiler of future me: Doesn't matter at all, if performance is important passes aren't used
+// anyways
 
 //// Removes obvious non-candidates
 // e.g.: if 7 is already in the row, remove it as candidates in undetermined cells of this row
@@ -81,7 +84,7 @@ int simpleCleanPass(Grid grid)
 }
 
 // Find candidates that only occur once in a house
-int candidateOnlyInOneCellOfHouse(Grid grid)
+int candidateOnlyInOneCellOfHousePass(Grid grid)
 {
     bool somethingChanged = false;
 
@@ -95,48 +98,55 @@ int candidateOnlyInOneCellOfHouse(Grid grid)
             // Determined numbers go to notLonely directly
             if (currRowPos(i, j).determined) notLonely[ROW] |= 1 << (currRowPos(i, j).number - 1);
             if (!currRowPos(i, j).determined) {
-                for (k = 0; k < 9; k++) {
-                    if (currRowPos(i, j).candidates & 1 << k) {
-                        // candidate found already
-                        if (alreadyAppeared[ROW] & 1 << k) notLonely[ROW] |= 1 << k;
-                        // First occurence
-                        else
-                            alreadyAppeared[ROW] |= 1 << k;
-                    }
-                }
+                // for (k = 0; k < 9; k++) {
+                //     if (currRowPos(i, j).candidates & 1 << k) {
+                //         // candidate found already
+                //         if (alreadyAppeared[ROW] & 1 << k) notLonely[ROW] |= 1 << k;
+                //         // First occurence
+                //         else
+                //             alreadyAppeared[ROW] |= 1 << k;
+                //     }
+                // }
+                notLonely[ROW] |= alreadyAppeared[ROW] & currRowPos(i, j).candidates;
+                alreadyAppeared[ROW] |= currRowPos(i, j).candidates;
             }
 
             if (currColumnPos(i, j).determined)
                 notLonely[COLUMN] |= 1 << (currColumnPos(i, j).number - 1);
             if (!currColumnPos(i, j).determined) {
-                for (k = 0; k < 9; k++) {
-                    if (currColumnPos(i, j).candidates & 1 << k) {
-                        // candidate found already
-                        if (alreadyAppeared[COLUMN] & 1 << k) notLonely[COLUMN] |= 1 << k;
-                        // First occurence
-                        else
-                            alreadyAppeared[COLUMN] |= 1 << k;
-                    }
-                }
+                // for (k = 0; k < 9; k++) {
+                //     if (currColumnPos(i, j).candidates & 1 << k) {
+                //         // candidate found already
+                //         if (alreadyAppeared[COLUMN] & 1 << k) notLonely[COLUMN] |= 1 << k;
+                //         // First occurence
+                //         else
+                //             alreadyAppeared[COLUMN] |= 1 << k;
+                //     }
+                // }
+                notLonely[COLUMN] |= alreadyAppeared[COLUMN] & currColumnPos(i, j).candidates;
+                alreadyAppeared[COLUMN] |= currColumnPos(i, j).candidates;
             }
 
             if (currSubgridPos(i, j).determined)
                 notLonely[SUBGRID] |= 1 << (currSubgridPos(i, j).number - 1);
             if (!currSubgridPos(i, j).determined) {
-                for (k = 0; k < 9; k++) {
-                    if (currSubgridPos(i, j).candidates & 1 << k) {
-                        // candidate found already
-                        if (alreadyAppeared[SUBGRID] & 1 << k) notLonely[SUBGRID] |= 1 << k;
-                        // First occurence
-                        else
-                            alreadyAppeared[SUBGRID] |= 1 << k;
-                    }
-                }
+                // for (k = 0; k < 9; k++) {
+                //     if (currSubgridPos(i, j).candidates & 1 << k) {
+                //         // candidate found already
+                //         if (alreadyAppeared[SUBGRID] & 1 << k) notLonely[SUBGRID] |= 1 << k;
+                //         // First occurence
+                //         else
+                //             alreadyAppeared[SUBGRID] |= 1 << k;
+                //     }
+                // }
+                notLonely[SUBGRID] |= alreadyAppeared[SUBGRID] & currSubgridPos(i, j).candidates;
+                alreadyAppeared[SUBGRID] |= currSubgridPos(i, j).candidates;
             }
         }
         // Every number _not_ int notLonely is lonely and thus has to be the determined number in
         // its cell
         // Attention: We loop through digits of notLonely, not the cells
+        // TODO could probably be optimized
         for (j = 0; j < 9; j++) {
             // j is a lonely candidate
             if (~notLonely[ROW] & 1 << j) {
@@ -201,7 +211,6 @@ int nakedPairsPass(Grid grid)
                         // Hurray, we found a naked pair
                         for (l = 0; l < 9; l++) {
                             if (l == j || l == (j + k) % 9) continue;
-                            // Again, why non whining about sequence points??
                             if (!currRowPos(i, l).determined) {
                                 if (currRowPos(i, l).candidates
                                     != (currRowPos(i, l).candidates
@@ -935,7 +944,7 @@ int intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
                 for (k = 0; k < 9; k++) {
                     if (i % 3 * 3 <= k && k < i % 3 * 3 + 3) continue;
                     if (!currRowPos(rowNumber, k).determined) {
-                        // ?? Wieso hier kein compiler geheule wegen sequence points ??
+                        // ?? Wieso hier kein compiler geheule wegen sequence points ?? TODO
                         if (currRowPos(rowNumber, k).candidates
                             != (currRowPos(rowNumber, k).candidates
                                 &= ~possiblyOnlyInSubHouse[ROW]))
@@ -1077,7 +1086,7 @@ int runAllPasses(Grid grid)
     int madeProgress = false;
     // Return code of all passes identical with runAllPasses
     madeProgress |= simpleCleanPass(grid);
-    madeProgress |= candidateOnlyInOneCellOfHouse(grid);
+    madeProgress |= candidateOnlyInOneCellOfHousePass(grid);
     madeProgress |= nakedPairsPass(grid);
     madeProgress |= nakedTripletsPass(grid);
     madeProgress |= nakedQuadsPass(grid);
@@ -1094,25 +1103,71 @@ int runAllPasses(Grid grid)
     return madeProgress;
 }
 
-// Same as run all passes but skips the resource intensive ones (estimate from number of nested
-// loops)
-int runCheapPasses(Grid grid)
+// Runs passes in increasing computing intensive order; exits early if problem was modified
+// Return codes:
+// >0: Problem has been modified
+// 0: Problem hasn't been modified (=> no progess)
+// <0: Problem is invalid (either invalid from the beginning or pass is malformed)
+int runAllPassesSmart(Grid grid)
 {
     int madeProgress = false;
     // Return code of all passes identical with runAllPasses
-    madeProgress |= simpleCleanPass(grid);
-    madeProgress |= candidateOnlyInOneCellOfHouse(grid);
-    // madeProgress |= nakedPairsPass(grid);
-    // madeProgress |= nakedTripletsPass(grid);
-    // madeProgress |= nakedQuadsPass(grid);
-    // madeProgress |= hiddenPairsPass(grid);
-    // madeProgress |= hiddenTripletsPass(grid);
-    // madeProgress |= hiddenQuadsPass(grid);
-    madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid);
-    madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
-    madeProgress |= singleCandidateToDeterminedPass(grid);
-    madeProgress |= isGridValidPass(grid);
-    // [...]
+    // Commented number is number of nested loops for resource intensity estimate
+    madeProgress |= simpleCleanPass(grid); // 2
+    madeProgress |= candidateOnlyInOneCellOfHousePass(grid); // 3
+    if (madeProgress) goto exit;
+    madeProgress |= intersectionRemovalBoxLineReductionPass(grid); // 3
+    if (madeProgress) goto exit;
+    madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid); // 4
+    if (madeProgress) goto exit;
+    madeProgress |= nakedPairsPass(grid); // 4
+    if (madeProgress) goto exit;
+    madeProgress |= hiddenPairsPass(grid); // 4
+    if (madeProgress) goto exit;
+    madeProgress |= nakedTripletsPass(grid); // 5
+    if (madeProgress) goto exit;
+    madeProgress |= hiddenTripletsPass(grid); // 5
+    if (madeProgress) goto exit;
+    madeProgress |= nakedQuadsPass(grid); // 6
+    if (madeProgress) goto exit;
+    madeProgress |= hiddenQuadsPass(grid); // 6
 
+exit:
+    madeProgress |= singleCandidateToDeterminedPass(grid); // 1
+    madeProgress |= isGridValidPass(grid);
+    return madeProgress;
+}
+
+// Runs passes in increasing computing intensive order; exits early if problem was modified; skips
+// passes that achieve rarely results and are resource intensive Return codes: >0: Problem has been
+// modified 0: Problem hasn't been modified (=> no progess) <0: Problem is invalid (either invalid
+// from the beginning or pass is malformed)
+int runFastPassesSmart(Grid grid)
+{
+    int madeProgress = false;
+    // Return code of all passes identical with runAllPasses
+    // Commented number is number of nested loops for resource intensity estimate
+    madeProgress |= simpleCleanPass(grid); // 2
+    madeProgress |= candidateOnlyInOneCellOfHousePass(grid); // 3
+    if (madeProgress) goto exit;
+    madeProgress |= intersectionRemovalBoxLineReductionPass(grid); // 3
+    if (madeProgress) goto exit;
+    madeProgress |= intersectionRemovalPointingPairsOrTriplesPass(grid); // 4
+    if (madeProgress) goto exit;
+    madeProgress |= nakedPairsPass(grid); // 4
+    if (madeProgress) goto exit;
+    madeProgress |= hiddenPairsPass(grid); // 4
+    // if (madeProgress) goto exit;
+    // madeProgress |= nakedTripletsPass(grid); // 5
+    // if (madeProgress) goto exit;
+    // madeProgress |= hiddenTripletsPass(grid); // 5
+    // if (madeProgress) goto exit;
+    // madeProgress |= nakedQuadsPass(grid); // 6
+    // if (madeProgress) goto exit;
+    // madeProgress |= hiddenQuadsPass(grid); // 6
+
+exit:
+    madeProgress |= singleCandidateToDeterminedPass(grid); // 1
+    madeProgress |= isGridValidPass(grid);
     return madeProgress;
 }

@@ -132,4 +132,5 @@ void printGrid(Grid g, bool compact, FILE* output)
             g[80].determined ? g[80].number + '0' : ' ');
         // clang-format on
     }
+    fflush(output);
 }

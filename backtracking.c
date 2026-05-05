@@ -1,6 +1,5 @@
 #include "sudoku.h"
 #include <stdbit.h>
-#include <stdio.h>
 
 // Return code:
 // >1: Solved
@@ -9,19 +8,22 @@
 int passSolve(Grid grid)
 {
     int madeProgress, i;
+    // I experimented with using passes in different ways (or not at all) on diabolical.txt
     do {
+        //// Times are for diabolical.txt
+
+        // 2m17.836s
         // madeProgress = runAllPasses(grid);
-        //// How about only running expensive passes as well if cheap ones fail?
-        /* if (!(madeProgress = runCheapPasses(grid))) {
-            madeProgress = runAllPasses(grid);
-        } */
 
-        //// Maybe running only the cheap passes is faster in combination with backtracking?
-        //// => It is
-        // madeProgress = runCheapPasses(grid);
+        // 1m42.592s
+        // madeProgress = runAllPassesSmart(grid);
 
-        //// What the hell, this is the fastest. 1000+ loc for nothing :(
-        madeProgress = 0;
+        // 0m27.316s (but can't reproduce time)
+        madeProgress = runFastPassesSmart(grid);
+
+        // This would be pure backtracking
+        // 3h30m3.1957s (extrapolated after 7’274 solves)
+        // madeProgress = isGridValidPass(grid);
     } while (madeProgress > 0);
 
     // Check whether sudoku has been solved completely
@@ -58,6 +60,7 @@ int findCellWithLeastCandidates(Grid grid)
     return 67;
 }
 
+// Copies grid a into grid b (from a grid array)
 void copyGrid(Grid* grid, int a, int b)
 {
     int i;
@@ -71,10 +74,10 @@ void copyGrid(Grid* grid, int a, int b)
 // because that is the maximum possible number of unsolved cells for a problem to be uniquely
 // solvable)
 //
-// Return code:
-// >1: Solved
-// 0: partially solved (impossible)
-// <1: problem broken (either from the beginning or by passes)
+// Return code: (No <0;>0 so that I can use switch statement...)
+// 1: Solved
+// 0: partially solved (impossible with backtracking)
+// -1: problem broken (either from the beginning or by passes)
 int backtrackSolve(Grid* grid)
 {
     int gridCounter = 0, status, guessCell, guessNumber;
@@ -82,9 +85,9 @@ int backtrackSolve(Grid* grid)
         status = passSolve(grid[gridCounter]);
         if (status > 0) {
             // Yay, problem solved
-            if (!gridCounter) copyGrid(grid, gridCounter, 0);
-            if (gridCounter > 5) printf("%d\n", gridCounter);
-            fflush(stdout);
+            if (gridCounter) copyGrid(grid, gridCounter, 0);
+            // printf("%d\n", gridCounter);
+            // fflush(stdout);
             return 1;
         }
 

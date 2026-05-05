@@ -1,84 +1,131 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "sudoku.h"
 
-// Expects a stream with 81 digits, moves fp
-void parseProblem(FILE* input, Grid grid)
+#define PRINT_USAGE                                                                                \
+    fprintf(stderr,                                                                                \
+        "Usage: %s [INPUT [OUTPUT]]\n       stdin and stdout are used by default\n\nFile format: " \
+        "One or more lines matching the following pattern: [0-9]{81}\\n (0 denotes an unknown)\n", \
+        argv[0])
+
+// problem is a string of at least 81 chars containing digits
+// Return code: >0 -> Success
+//               0 -> Invalid problem string
+int parseProblem(char* problem, Grid grid)
 {
-    // Parse problem
-    int j, currNum;
-    for (j = 0; j < 81; j++) {
-        currNum = getc(input) - '0';
+    int i, currNum;
+    for (i = 0; i < 81; i++) {
+        currNum = problem[i] - '0';
+        // if (true) {
+        if (currNum < 0 || currNum > 9) {
+            return 0;
+        }
         if (currNum) {
-            grid[j].determined = true;
-            grid[j].number = currNum;
+            grid[i].determined = true;
+            grid[i].number = currNum;
         } else {
-            grid[j].determined = false;
-            grid[j].candidates = ~0;
+            grid[i].determined = false;
+            grid[i].candidates = ~0;
         }
     }
+    return 1;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    Grid grid[64], gridCopy;
-    // FILE* puzzleInput = fopen("easy.txt", "r");
-    // FILE* puzzleInput = fopen("medium.txt", "r");
-    // FILE* puzzleInput = fopen("hard.txt", "r");
-    FILE* puzzleInput = fopen("diabolical.txt", "r");
-    int i, j, newlineOrEOF, unsolvedCounter = 0;
-    int isSolved;
-    bool firstUnsolved = true;
-
-    // Read problems
-    puts("\x1B[?25l");
-    for (i = 0; true; i++) {
-        parseProblem(puzzleInput, grid[0]);
-
-        // Copy grid before solving
-        for (j = 0; j < 81; j++) {
-            gridCopy[j].determined = grid[0][j].determined;
-            gridCopy[j].number = grid[0][j].number;
-            gridCopy[j].candidates = 0;
-        }
-
-        // Solve problem
-        isSolved = backtrackSolve(grid);
-
-        // TODO check whether originally fixed numbers have been modified
-
-        // Exit early if problem is invalid (hopefully problem was invalid from the beginning)
-        if (isSolved < 0) {
-            printGrid(gridCopy, false, stdout);
-            printGrid(grid[0], false, stdout);
-            printf("Problem Nr. %d got into a broken state\n", i + 1);
-            goto exit;
-        }
-
-        // Check whether problem has been solved
-        if (!isSolved) {
-            if (firstUnsolved) {
-                printGrid(gridCopy, false, stdout);
-                printGrid(grid[0], false, stdout);
-                printf("Couldn't solve Nr. %d\n", i + 1);
-                firstUnsolved = false;
-                fflush(stdout);
-            }
-            unsolvedCounter++;
-        }
-
-        // Newline
-        fgetc(puzzleInput);
-        if ((newlineOrEOF = fgetc(puzzleInput)) == EOF) break;
-        // ungetc instead of fseek because stdin will work
-        else
-            ungetc(newlineOrEOF, puzzleInput);
-        // printf("\r%d", i);
+    FILE *input, *output;
+    // No arguments -> stdin as input and stdout as output are used
+    if (argc == 1) {
+        input = stdin;
+        output = stdout;
     }
-    puts("\x1B[?25h");
-    // Correct counter for statistics
-    i++;
-    printf(
-        "%d/%d (%.2f%%) solved\n", i - unsolvedCounter, i, (double)(i - unsolvedCounter) / i * 100);
-exit:
+    // One argument -> argv[1] as input and stdout as output are used
+    else if (argc == 2) {
+        input = fopen(argv[1], "r");
+        if (!input) {
+            fprintf(stderr, "Couldn't open input\n\n");
+            PRINT_USAGE;
+            return EXIT_FAILURE;
+        }
+        output = stdout;
+    }
+    // Two arguments -> argv[1] as input and argv[2] as output
+    else if (argc == 3) {
+        input = fopen(argv[1], "r");
+        if (!input) {
+            fprintf(stderr, "Couldn't open input\n\n");
+            PRINT_USAGE;
+            return EXIT_FAILURE;
+        }
+        output = fopen(argv[2], "w");
+        if (!output) {
+            fprintf(stderr, "Couldn't open output\n\n");
+            PRINT_USAGE;
+            fclose(input);
+            return EXIT_FAILURE;
+        }
+    } else {
+        PRINT_USAGE;
+        return EXIT_FAILURE;
+    }
+
+    char currProblemString[83];
+    // 64 because every uniquely solvable sudoku has at least 17 clues
+    Grid grid[64], gridCopy;
+    int i;
+    while (fgets(currProblemString, 83, input) && !feof(input)) {
+        if (ferror(input)) {
+            fprintf(stderr, "Error while file reading\n");
+            return EXIT_FAILURE;
+        }
+
+        if (!parseProblem(currProblemString, grid[0])) {
+            fprintf(stderr, "Invalid puzzle format detected, aborting...\nPuzzle string: %s\n\n",
+                currProblemString);
+            PRINT_USAGE;
+            return EXIT_FAILURE;
+        }
+
+        // We assume backtrackSolve correctly verifies sudoku, thus no further checks about
+        // correctness are being made
+        switch (backtrackSolve(grid)) {
+        case -1:
+            fprintf(stderr,
+                "Contradictions in puzzle detected, either from the beginning or a pass broke "
+                "it\n");
+            fprintf(stderr, "Input:\n");
+            parseProblem(currProblemString, gridCopy);
+            printGrid(gridCopy, true, stderr);
+            fprintf(stderr, "Current (incorrect) state:\n");
+            printGrid(grid[0], false, stderr);
+            return EXIT_FAILURE;
+
+            // Impossible with backtracking
+        case 0:
+            fprintf(stderr, "Puzzle has been solved incompletely\n");
+            fprintf(stderr, "Input:\n");
+            parseProblem(currProblemString, gridCopy);
+            printGrid(gridCopy, true, stderr);
+            fprintf(stderr, "Current (incorrect) state:\n");
+            printGrid(grid[0], false, stderr);
+            return EXIT_FAILURE;
+
+        case 1:
+            for (i = 0; i < 81; i++) {
+                currProblemString[i] = grid[0][i].number + '0';
+            }
+            currProblemString[81] = '\n';
+            currProblemString[82] = '\0';
+            fputs(currProblemString, output);
+            if (ferror(output)) {
+                fprintf(stderr, "Error while writing to file\n");
+                return EXIT_FAILURE;
+            }
+        }
+    }
+
+    if (input != stdin) fclose(input);
+    if (output != stdout) fclose(output);
+    return EXIT_SUCCESS;
 }
