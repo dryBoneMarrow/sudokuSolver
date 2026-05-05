@@ -88,17 +88,23 @@ int main(int argc, char** argv)
         }
 
         // We assume backtrackSolve correctly verifies sudoku, thus no further checks about
-        // correctness are being made
+        // correctness are being made (on solved grid)
         switch (backtrackSolve(grid)) {
         case -1:
-            fprintf(stderr,
-                "Contradictions in puzzle detected, either from the beginning or a pass broke "
-                "it\n");
-            fprintf(stderr, "Input:\n");
             parseProblem(currProblemString, gridCopy);
-            printGrid(gridCopy, true, stderr);
-            fprintf(stderr, "Current (incorrect) state:\n");
-            printGrid(grid[0], false, stderr);
+            // isGridValid only returns -1 or 0, thus no need to check / handle >1
+            if (!isGridValidPass(gridCopy)) {
+                fprintf(
+                    stderr, "Contradictions in puzzle detected while solving; a pass broke it\n");
+                fprintf(stderr, "Input:\n");
+                printGrid(gridCopy, true, stderr);
+                fprintf(stderr, "Current (incorrect) state:\n");
+                printGrid(grid[0], false, stderr);
+            } else {
+                fprintf(stderr, "Contradictions in puzzle input detected\n");
+                fprintf(stderr, "Input:\n");
+                printGrid(gridCopy, true, stderr);
+            }
             return EXIT_FAILURE;
 
             // Impossible with backtracking
@@ -112,6 +118,7 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
 
         case 1:
+
             for (i = 0; i < 81; i++) {
                 currProblemString[i] = grid[0][i].number + '0';
             }

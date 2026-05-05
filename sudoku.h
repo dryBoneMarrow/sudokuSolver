@@ -24,5 +24,5 @@ int backtrackSolve(Grid* grid);
 // int runAllPasses(Grid grid);
 // int runAllPassesSmart(Grid grid);
 int runFastPassesSmart(Grid grid);
-// int isGridValidPass(Grid grid);
+int isGridValidPass(Grid grid);
 #endif
