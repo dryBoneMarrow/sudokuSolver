@@ -901,6 +901,7 @@ int intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l;
+    unsigned _BitInt(9) tmp;
     for (i = 0; i < 9; i++) {
         // j is the current row / column inside the subgrid
         for (j = 0; j < 3; j++) {
@@ -944,8 +945,8 @@ int intersectionRemovalPointingPairsOrTriplesPass(Grid grid)
                 for (k = 0; k < 9; k++) {
                     if (i % 3 * 3 <= k && k < i % 3 * 3 + 3) continue;
                     if (!currRowPos(rowNumber, k).determined) {
-                        // ?? Wieso hier kein compiler geheule wegen sequence points ?? TODO
-                        if (currRowPos(rowNumber, k).candidates
+                        tmp = currRowPos(rowNumber, k).candidates;
+                        if (tmp
                             != (currRowPos(rowNumber, k).candidates
                                 &= ~possiblyOnlyInSubHouse[ROW]))
                             somethingChanged = true;
@@ -1051,23 +1052,26 @@ int singleCandidateToDeterminedPass(Grid grid)
 int isGridValidPass(Grid grid)
 {
     int i, j;
+    unsigned _BitInt(9) tmp;
     for (i = 0; i < 9; i++) {
         unsigned _BitInt(9) foundNumbers[3] = { };
         for (j = 0; j < 9; j++) {
             // Invalid if number occurs twice in house
-            if (currRowPos(i, j).determined)
-                if (foundNumbers[ROW] == (foundNumbers[ROW] |= 1 << (currRowPos(i, j).number - 1)))
+            if (currRowPos(i, j).determined) {
+                tmp = foundNumbers[ROW];
+                if (tmp == (foundNumbers[ROW] |= 1 << (currRowPos(i, j).number - 1))) return -1;
+            }
+            if (currColumnPos(i, j).determined) {
+                tmp = foundNumbers[COLUMN];
+                if (tmp == (foundNumbers[COLUMN] |= 1 << (currColumnPos(i, j).number - 1)))
                     return -1;
+            }
 
-            if (currColumnPos(i, j).determined)
-                if (foundNumbers[COLUMN]
-                    == (foundNumbers[COLUMN] |= 1 << (currColumnPos(i, j).number - 1)))
+            if (currSubgridPos(i, j).determined) {
+                tmp = foundNumbers[SUBGRID];
+                if (tmp == (foundNumbers[SUBGRID] |= 1 << (currSubgridPos(i, j).number - 1)))
                     return -1;
-
-            if (currSubgridPos(i, j).determined)
-                if (foundNumbers[SUBGRID]
-                    == (foundNumbers[SUBGRID] |= 1 << (currSubgridPos(i, j).number - 1)))
-                    return -1;
+            }
 
             // Invalid if cell has no candidates left
             if (!grid[i * 9 + j].determined && !grid[i * 9 + j].candidates) return -1;
