@@ -9,9 +9,9 @@ All basic strategies from [sudokuwiki.org](https://www.sudokuwiki.org/) have bee
 Use makefile or just compile all the .c files (C23 features are used!)
 
 ## Usage
-'''
+```
 Usage: ./main [INPUT [OUTPUT]]
        stdin and stdout are used by default
 
 File format: One or more lines matching the following pattern: [0-9]{81}\n (0 denotes an unknown)
-'''
+```
