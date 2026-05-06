@@ -8,31 +8,13 @@ void printGrid(Grid g, bool compact, FILE* output)
 // grid itself (wontfix because debug / testing only)
 {
     if (!compact) {
+        static unsigned char bigGrid[] = {
+#embed "bigGrid.txt"
+            , '\0'
+        };
+        printf("%s", bigGrid);
+
         int i;
-
-        // Storing the whole string in one line would result in a stack overflow (string literal max
-        // ist 4095 in C23)
-        static char topLine[]
-            = "╭───────┬───────┬───────┰───────┬───────┬───────┰───────┬───────┬───────╮\n";
-        static char insideField[]
-            = "│       │       │       ┃       │       │       ┃       │       │       │\n";
-        static char fieldSeperator[]
-            = "├───────┼───────┼───────╂───────┼───────┼───────╂───────┼───────┼───────┤\n";
-        static char fatFieldSeperator[]
-            = "┝━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━┥\n";
-        static char bottomLine[]
-            = "╰───────┴───────┴───────┸───────┴───────┴───────┸───────┴───────┴───────╯\n";
-
-        char* playingField[] = { topLine, insideField, insideField, insideField, fieldSeperator,
-            insideField, insideField, insideField, fieldSeperator, insideField, insideField,
-            insideField, fatFieldSeperator, insideField, insideField, insideField, fieldSeperator,
-            insideField, insideField, insideField, fieldSeperator, insideField, insideField,
-            insideField, fatFieldSeperator, insideField, insideField, insideField, fieldSeperator,
-            insideField, insideField, insideField, fieldSeperator, insideField, insideField,
-            insideField, bottomLine };
-        for (i = 0; i < 37; i++) {
-            fputs(playingField[i], output);
-        }
 
         // Escape code magic
         fprintf(output, CUR_SAVE_POSITION);
