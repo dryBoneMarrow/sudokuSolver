@@ -46,6 +46,7 @@ int findCellWithLeastCandidates(Grid grid)
     int found[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 }, i;
     for (i = 0; i < 81; i++) {
         if (!grid[i].determined) {
+            // Assumes every undetermined cell has candidates (== is valid), this is okay imo
             found[stdc_count_ones(grid[i].candidates) - 1] = i;
             // Assuming singleCandidateToDeterminedPass() was run on grid, this check is utterly
             // useless

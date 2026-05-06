@@ -12,12 +12,11 @@
 // problem is a string of at least 81 chars containing digits
 // Return code: >0 -> Success
 //               0 -> Invalid problem string
-int parseProblem(char* problem, Grid grid)
+int parseProblem(const char* problem, Grid grid)
 {
     int i, currNum;
     for (i = 0; i < 81; i++) {
         currNum = problem[i] - '0';
-        // if (true) {
         if (currNum < 0 || currNum > 9) {
             return 0;
         }
@@ -32,7 +31,7 @@ int parseProblem(char* problem, Grid grid)
     return 1;
 }
 
-int main(int argc, char** argv)
+int main(const int argc, char** argv)
 {
     FILE *input, *output;
     // No arguments -> stdin as input and stdout as output are used
@@ -70,21 +69,26 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    // 81 for each digit + \n + \0
     char currProblemString[83];
     // 64 because every uniquely solvable sudoku has at least 17 clues
     Grid grid[64], gridCopy;
     int i;
+    int exit_status = EXIT_SUCCESS;
+
     while (fgets(currProblemString, 83, input) && !feof(input)) {
         if (ferror(input)) {
             fprintf(stderr, "Error while file reading\n");
-            return EXIT_FAILURE;
+            exit_status = EXIT_FAILURE;
+            goto exit_cleanup;
         }
 
         if (!parseProblem(currProblemString, grid[0])) {
             fprintf(stderr, "Invalid puzzle format detected, aborting...\nPuzzle string: %s\n\n",
                 currProblemString);
             PRINT_USAGE;
-            return EXIT_FAILURE;
+            exit_status = EXIT_FAILURE;
+            goto exit_cleanup;
         }
 
         // We assume backtrackSolve correctly verifies sudoku, thus no further checks about
@@ -105,7 +109,8 @@ int main(int argc, char** argv)
                 fprintf(stderr, "Input:\n");
                 printGrid(gridCopy, true, stderr);
             }
-            return EXIT_FAILURE;
+            exit_status = EXIT_FAILURE;
+            goto exit_cleanup;
 
             // Impossible with backtracking
         case 0:
@@ -115,7 +120,8 @@ int main(int argc, char** argv)
             printGrid(gridCopy, true, stderr);
             fprintf(stderr, "Current (incorrect) state:\n");
             printGrid(grid[0], false, stderr);
-            return EXIT_FAILURE;
+            exit_status = EXIT_FAILURE;
+            goto exit_cleanup;
 
         case 1:
 
@@ -127,12 +133,14 @@ int main(int argc, char** argv)
             fputs(currProblemString, output);
             if (ferror(output)) {
                 fprintf(stderr, "Error while writing to file\n");
-                return EXIT_FAILURE;
+                exit_status = EXIT_FAILURE;
+                goto exit_cleanup;
             }
         }
     }
 
+exit_cleanup:
     if (input != stdin) fclose(input);
     if (output != stdout) fclose(output);
-    return EXIT_SUCCESS;
+    return exit_status;
 }
