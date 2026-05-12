@@ -10,16 +10,21 @@ int passSolve(Grid grid)
     int madeProgress, i;
     // I experimented with using passes in different ways (or not at all) on diabolical.txt
     do {
-        //// Times are for diabolical.txt
+//// Times are for diabolical.txt
 
-        // 2m17.836s
-        // madeProgress = runAllPasses(grid);
+// 2m17.836s
+// We want this pass to catch possible malformed passes in DEBUG mode
+#ifdef DEBUG
+        madeProgress = runAllPasses(grid);
+#endif
 
-        // 1m42.592s
-        // madeProgress = runAllPassesSmart(grid);
+// 1m42.592s
+// madeProgress = runAllPassesSmart(grid);
 
-        // 0m27.316s (but can't reproduce time)
+// 0m27.316s (but can't reproduce time)
+#ifndef DEBUG
         madeProgress = runFastPassesSmart(grid);
+#endif
 
         // This would be pure backtracking
         // 3h30m3.1957s (extrapolated after 7’274 solves)

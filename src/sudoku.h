@@ -21,8 +21,12 @@ void printGrid(Grid grid, bool compact, FILE* output);
 
 int backtrackSolve(Grid* grid);
 
-// int runAllPasses(Grid grid);
+#ifdef DEBUG
+int runAllPasses(Grid grid);
+#endif
 // int runAllPassesSmart(Grid grid);
+#ifndef DEBUG
 int runFastPassesSmart(Grid grid);
+#endif
 int isGridValidPass(Grid grid);
 #endif

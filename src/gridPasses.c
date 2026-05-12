@@ -43,13 +43,12 @@ enum house { ROW, COLUMN, SUBGRID };
 // Spoiler of future me: Doesn't matter at all, if performance is important passes aren't used
 // anyways
 
-// TODO change all the UB (a==a++)
-
 //// Removes obvious non-candidates
 // e.g.: if 7 is already in the row, remove it as candidates in undetermined cells of this row
 int simpleCleanPass(Grid grid)
 {
     bool somethingChanged = false;
+    unsigned _BitInt(9) weDontLikeUB;
 
     int i, j;
     for (i = 0; i < 9; i++) {
@@ -67,19 +66,29 @@ int simpleCleanPass(Grid grid)
         }
         // Remove fixed numbers as candidates from undetermined cells
         for (j = 0; j < 9; j++) {
-            if (!currRowPos(i, j).determined)
-                if (currRowPos(i, j).candidates != (currRowPos(i, j).candidates &= ~fixedNums[ROW]))
+            if (!currRowPos(i, j).determined) {
+                weDontLikeUB = (currRowPos(i, j).candidates & ~fixedNums[ROW]);
+                if (currRowPos(i, j).candidates != weDontLikeUB) {
                     somethingChanged = true;
+                    (currRowPos(i, j).candidates &= ~fixedNums[ROW]);
+                }
+            }
 
-            if (!currColumnPos(i, j).determined)
-                if (currColumnPos(i, j).candidates
-                    != (currColumnPos(i, j).candidates &= ~fixedNums[COLUMN]))
+            if (!currColumnPos(i, j).determined) {
+                weDontLikeUB = (currColumnPos(i, j).candidates & ~fixedNums[COLUMN]);
+                if (currColumnPos(i, j).candidates != weDontLikeUB) {
                     somethingChanged = true;
+                    (currColumnPos(i, j).candidates &= ~fixedNums[COLUMN]);
+                }
+            }
 
-            if (!currSubgridPos(i, j).determined)
-                if (currSubgridPos(i, j).candidates
-                    != (currSubgridPos(i, j).candidates &= ~fixedNums[SUBGRID]))
+            if (!currSubgridPos(i, j).determined) {
+                weDontLikeUB = (currSubgridPos(i, j).candidates & ~fixedNums[SUBGRID]);
+                if (currSubgridPos(i, j).candidates != weDontLikeUB) {
                     somethingChanged = true;
+                    (currSubgridPos(i, j).candidates &= ~fixedNums[SUBGRID]);
+                }
+            }
         }
     }
     return somethingChanged;
@@ -100,15 +109,6 @@ int candidateOnlyInOneCellOfHousePass(Grid grid)
             // Determined numbers go to notLonely directly
             if (currRowPos(i, j).determined) notLonely[ROW] |= 1 << (currRowPos(i, j).number - 1);
             if (!currRowPos(i, j).determined) {
-                // for (k = 0; k < 9; k++) {
-                //     if (currRowPos(i, j).candidates & 1 << k) {
-                //         // candidate found already
-                //         if (alreadyAppeared[ROW] & 1 << k) notLonely[ROW] |= 1 << k;
-                //         // First occurence
-                //         else
-                //             alreadyAppeared[ROW] |= 1 << k;
-                //     }
-                // }
                 notLonely[ROW] |= alreadyAppeared[ROW] & currRowPos(i, j).candidates;
                 alreadyAppeared[ROW] |= currRowPos(i, j).candidates;
             }
@@ -116,15 +116,6 @@ int candidateOnlyInOneCellOfHousePass(Grid grid)
             if (currColumnPos(i, j).determined)
                 notLonely[COLUMN] |= 1 << (currColumnPos(i, j).number - 1);
             if (!currColumnPos(i, j).determined) {
-                // for (k = 0; k < 9; k++) {
-                //     if (currColumnPos(i, j).candidates & 1 << k) {
-                //         // candidate found already
-                //         if (alreadyAppeared[COLUMN] & 1 << k) notLonely[COLUMN] |= 1 << k;
-                //         // First occurence
-                //         else
-                //             alreadyAppeared[COLUMN] |= 1 << k;
-                //     }
-                // }
                 notLonely[COLUMN] |= alreadyAppeared[COLUMN] & currColumnPos(i, j).candidates;
                 alreadyAppeared[COLUMN] |= currColumnPos(i, j).candidates;
             }
@@ -132,15 +123,6 @@ int candidateOnlyInOneCellOfHousePass(Grid grid)
             if (currSubgridPos(i, j).determined)
                 notLonely[SUBGRID] |= 1 << (currSubgridPos(i, j).number - 1);
             if (!currSubgridPos(i, j).determined) {
-                // for (k = 0; k < 9; k++) {
-                //     if (currSubgridPos(i, j).candidates & 1 << k) {
-                //         // candidate found already
-                //         if (alreadyAppeared[SUBGRID] & 1 << k) notLonely[SUBGRID] |= 1 << k;
-                //         // First occurence
-                //         else
-                //             alreadyAppeared[SUBGRID] |= 1 << k;
-                //     }
-                // }
                 notLonely[SUBGRID] |= alreadyAppeared[SUBGRID] & currSubgridPos(i, j).candidates;
                 alreadyAppeared[SUBGRID] |= currSubgridPos(i, j).candidates;
             }
@@ -203,6 +185,8 @@ int nakedPairsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l;
+    unsigned _BitInt(9) weDontLikeUB;
+
     for (i = 0; i < 9; i++) {
         for (j = 0; j < 9; j++) {
             // If potential naked pair is found
@@ -213,11 +197,12 @@ int nakedPairsPass(Grid grid)
                         // Hurray, we found a naked pair
                         for (l = 0; l < 9; l++) {
                             if (l == j || l == (j + k) % 9) continue;
+                            weDontLikeUB
+                                = (currRowPos(i, l).candidates & ~currRowPos(i, j).candidates);
                             if (!currRowPos(i, l).determined) {
-                                if (currRowPos(i, l).candidates
-                                    != (currRowPos(i, l).candidates
-                                        &= ~currRowPos(i, j).candidates)) {
+                                if (currRowPos(i, l).candidates != weDontLikeUB) {
                                     somethingChanged = true;
+                                    currRowPos(i, l).candidates &= ~currRowPos(i, j).candidates;
                                 }
                             }
                         }
@@ -234,11 +219,13 @@ int nakedPairsPass(Grid grid)
                         // Hurray, we found a naked pair
                         for (l = 0; l < 9; l++) {
                             if (l == j || l == (j + k) % 9) continue;
+                            weDontLikeUB = (currColumnPos(i, l).candidates
+                                & ~currColumnPos(i, j).candidates);
                             if (!currColumnPos(i, l).determined) {
-                                if (currColumnPos(i, l).candidates
-                                    != (currColumnPos(i, l).candidates
-                                        &= ~currColumnPos(i, j).candidates)) {
+                                if (currColumnPos(i, l).candidates != weDontLikeUB) {
                                     somethingChanged = true;
+                                    currColumnPos(i, l).candidates
+                                        &= ~currColumnPos(i, j).candidates;
                                 }
                             }
                         }
@@ -255,11 +242,13 @@ int nakedPairsPass(Grid grid)
                         // Hurray, we found a naked pair
                         for (l = 0; l < 9; l++) {
                             if (l == j || l == (j + k) % 9) continue;
+                            weDontLikeUB = (currSubgridPos(i, l).candidates
+                                & ~currSubgridPos(i, j).candidates);
                             if (!currSubgridPos(i, l).determined) {
-                                if (currSubgridPos(i, l).candidates
-                                    != (currSubgridPos(i, l).candidates
-                                        &= ~currSubgridPos(i, j).candidates)) {
+                                if (currSubgridPos(i, l).candidates != weDontLikeUB) {
                                     somethingChanged = true;
+                                    currSubgridPos(i, l).candidates
+                                        &= ~currSubgridPos(i, j).candidates;
                                 }
                             }
                         }
@@ -277,6 +266,8 @@ int nakedTripletsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l, m;
+    unsigned _BitInt(9) whyHaveICodedSoManyUBStupidSequencePoints;
+
     for (i = 0; i < 9; i++) {
         for (j = 0; j < 9; j++) {
             if (currRowPos(i, j).determined || stdc_count_ones(currRowPos(i, j).candidates) > 3)
@@ -294,9 +285,13 @@ int nakedTripletsPass(Grid grid)
                         // => Found triplet
                         for (m = 0; m < 9; m++) {
                             if (m == j || m == k || m == l || currRowPos(i, m).determined) continue;
+                            whyHaveICodedSoManyUBStupidSequencePoints
+                                = currRowPos(i, m).candidates & ~candidate;
                             if (currRowPos(i, m).candidates
-                                != (currRowPos(i, m).candidates &= ~candidate))
+                                != (whyHaveICodedSoManyUBStupidSequencePoints)) {
                                 somethingChanged = true;
+                                currRowPos(i, m).candidates &= ~candidate;
+                            }
                         }
                     }
                 }
@@ -322,9 +317,13 @@ int nakedTripletsPass(Grid grid)
                         for (m = 0; m < 9; m++) {
                             if (m == j || m == k || m == l || currColumnPos(i, m).determined)
                                 continue;
+                            whyHaveICodedSoManyUBStupidSequencePoints
+                                = currColumnPos(i, m).candidates & ~candidate;
                             if (currColumnPos(i, m).candidates
-                                != (currColumnPos(i, m).candidates &= ~candidate))
+                                != (whyHaveICodedSoManyUBStupidSequencePoints)) {
                                 somethingChanged = true;
+                                currColumnPos(i, m).candidates &= ~candidate;
+                            }
                         }
                     }
                 }
@@ -350,9 +349,13 @@ int nakedTripletsPass(Grid grid)
                         for (m = 0; m < 9; m++) {
                             if (m == j || m == k || m == l || currSubgridPos(i, m).determined)
                                 continue;
+                            whyHaveICodedSoManyUBStupidSequencePoints
+                                = currSubgridPos(i, m).candidates & ~candidate;
                             if (currSubgridPos(i, m).candidates
-                                != (currSubgridPos(i, m).candidates &= ~candidate))
+                                != (whyHaveICodedSoManyUBStupidSequencePoints)) {
                                 somethingChanged = true;
+                                currSubgridPos(i, m).candidates &= ~candidate;
+                            }
                         }
                     }
                 }
@@ -368,6 +371,7 @@ int nakedQuadsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l, m, n;
+    unsigned _BitInt(9) UBUBUBUBUBUBUBUBUBUB;
     for (i = 0; i < 9; i++) {
         // Row
         for (j = 0; j < 9; j++) {
@@ -393,9 +397,11 @@ int nakedQuadsPass(Grid grid)
                                 if (n == j || n == k || n == l || n == m
                                     || currRowPos(i, n).determined)
                                     continue;
-                                if (currRowPos(i, n).candidates
-                                    != (currRowPos(i, n).candidates &= ~candidate))
+                                UBUBUBUBUBUBUBUBUBUB = currRowPos(i, n).candidates & ~candidate;
+                                if (currRowPos(i, n).candidates != (UBUBUBUBUBUBUBUBUBUB)) {
                                     somethingChanged = true;
+                                    currRowPos(i, n).candidates &= ~candidate;
+                                }
                             }
                         }
                     }
@@ -429,9 +435,11 @@ int nakedQuadsPass(Grid grid)
                                 if (n == j || n == k || n == l || n == m
                                     || currColumnPos(i, n).determined)
                                     continue;
-                                if (currColumnPos(i, n).candidates
-                                    != (currColumnPos(i, n).candidates &= ~candidate))
+                                UBUBUBUBUBUBUBUBUBUB = currColumnPos(i, n).candidates & ~candidate;
+                                if (currColumnPos(i, n).candidates != (UBUBUBUBUBUBUBUBUBUB)) {
                                     somethingChanged = true;
+                                    currColumnPos(i, n).candidates &= ~candidate;
+                                }
                             }
                         }
                     }
@@ -465,9 +473,11 @@ int nakedQuadsPass(Grid grid)
                                 if (n == j || n == k || n == l || n == m
                                     || currSubgridPos(i, n).determined)
                                     continue;
-                                if (currSubgridPos(i, n).candidates
-                                    != (currSubgridPos(i, n).candidates &= ~candidate))
+                                UBUBUBUBUBUBUBUBUBUB = currSubgridPos(i, n).candidates & ~candidate;
+                                if (currSubgridPos(i, n).candidates != (UBUBUBUBUBUBUBUBUBUB)) {
                                     somethingChanged = true;
+                                    currSubgridPos(i, n).candidates &= ~candidate;
+                                }
                             }
                         }
                     }
@@ -485,6 +495,7 @@ int hiddenPairsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l;
+    unsigned _BitInt(9) comparisonShouldBeSequencedWTF;
     // i is the current house
     for (i = 0; i < 9; i++) {
         // (j,k) is a possible hidden pair
@@ -520,9 +531,11 @@ int hiddenPairsPass(Grid grid)
                     for (l = 0; l < 9; l++) {
                         // Skip cell if it doesn't contain hidden pair
                         if (!((1 << l) & pairLocation[ROW])) continue;
-                        if (currRowPos(i, l).candidates
-                            != (currRowPos(i, l).candidates = (1 << (j - 1)) + (1 << (k - 1))))
+                        comparisonShouldBeSequencedWTF = (1 << (j - 1)) + (1 << (k - 1));
+                        if (currRowPos(i, l).candidates != (comparisonShouldBeSequencedWTF)) {
                             somethingChanged = true;
+                            currRowPos(i, l).candidates = (1 << (j - 1)) + (1 << (k - 1));
+                        }
                     }
                 }
             skipHiddenPairRow:
@@ -554,9 +567,11 @@ int hiddenPairsPass(Grid grid)
                     for (l = 0; l < 9; l++) {
                         // Skip cell if it doesn't contain hidden pair
                         if (!((1 << l) & pairLocation[COLUMN])) continue;
-                        if (currColumnPos(i, l).candidates
-                            != (currColumnPos(i, l).candidates = (1 << (j - 1)) + (1 << (k - 1))))
+                        comparisonShouldBeSequencedWTF = (1 << (j - 1)) + (1 << (k - 1));
+                        if (currColumnPos(i, l).candidates != (comparisonShouldBeSequencedWTF)) {
                             somethingChanged = true;
+                            currColumnPos(i, l).candidates = (1 << (j - 1)) + (1 << (k - 1));
+                        }
                     }
                 }
             skipHiddenPairColumn:
@@ -588,9 +603,11 @@ int hiddenPairsPass(Grid grid)
                     for (l = 0; l < 9; l++) {
                         // Skip cell if it doesn't contain hidden pair
                         if (!((1 << l) & pairLocation[SUBGRID])) continue;
-                        if (currSubgridPos(i, l).candidates
-                            != (currSubgridPos(i, l).candidates = (1 << (j - 1)) + (1 << (k - 1))))
+                        comparisonShouldBeSequencedWTF = (1 << (j - 1)) + (1 << (k - 1));
+                        if (currSubgridPos(i, l).candidates != (comparisonShouldBeSequencedWTF)) {
                             somethingChanged = true;
+                            currSubgridPos(i, l).candidates = (1 << (j - 1)) + (1 << (k - 1));
+                        }
                     }
                 }
             skipHiddenPairSubgrid:
@@ -605,6 +622,7 @@ int hiddenTripletsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l, m;
+    unsigned _BitInt(9) AntiUBTempVar;
     // We argue for every house...
     for (i = 0; i < 9; i++) {
         // ... why every hidden triple is present or not (the triple being (j,k,l))
@@ -649,9 +667,11 @@ int hiddenTripletsPass(Grid grid)
                     // Delete all other candidates from the cells containing the triplet
                     for (m = 0; m < 9; m++) {
                         if (!((1 << m) & subsetOfTriplePresent[ROW])) continue;
-                        if (currRowPos(i, m).candidates
-                            != (currRowPos(i, m).candidates &= currentTriplet))
+                        AntiUBTempVar = currRowPos(i, m).candidates & currentTriplet;
+                        if (currRowPos(i, m).candidates != (AntiUBTempVar)) {
                             somethingChanged = 1;
+                            currRowPos(i, m).candidates &= currentTriplet;
+                        }
                     }
 
                 skipHiddenTripletRow:
@@ -690,9 +710,11 @@ int hiddenTripletsPass(Grid grid)
                     // Delete all other candidates from the cells containing the triplet
                     for (m = 0; m < 9; m++) {
                         if (!((1 << m) & subsetOfTriplePresent[COLUMN])) continue;
-                        if (currColumnPos(i, m).candidates
-                            != (currColumnPos(i, m).candidates &= currentTriplet))
+                        AntiUBTempVar = currColumnPos(i, m).candidates & currentTriplet;
+                        if (currColumnPos(i, m).candidates != (AntiUBTempVar)) {
                             somethingChanged = 1;
+                            currColumnPos(i, m).candidates &= currentTriplet;
+                        }
                     }
 
                 skipHiddenTripletColumn:
@@ -731,9 +753,11 @@ int hiddenTripletsPass(Grid grid)
                     // Delete all other candidates from the cells containing the triplet
                     for (m = 0; m < 9; m++) {
                         if (!((1 << m) & subsetOfTriplePresent[SUBGRID])) continue;
-                        if (currSubgridPos(i, m).candidates
-                            != (currSubgridPos(i, m).candidates &= currentTriplet))
+                        AntiUBTempVar = currSubgridPos(i, m).candidates & currentTriplet;
+                        if (currSubgridPos(i, m).candidates != (AntiUBTempVar)) {
                             somethingChanged = 1;
+                            currSubgridPos(i, m).candidates &= currentTriplet;
+                        }
                     }
 
                 skipHiddenTripletSubgrid:
@@ -749,6 +773,7 @@ int hiddenQuadsPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k, l, m, n;
+    unsigned _BitInt(9) UBUBUBUBUBUBUBUBUB;
     // We argue for every house...
     for (i = 0; i < 9; i++) {
         // ... why every hidden quad is present or not (the quad being (j,k,l,m))
@@ -796,9 +821,11 @@ int hiddenQuadsPass(Grid grid)
                         // Delete all other candidates from the cells containing the quad
                         for (n = 0; n < 9; n++) {
                             if (!((1 << n) & subsetOfQuadPresent[ROW])) continue;
-                            if (currRowPos(i, n).candidates
-                                != (currRowPos(i, n).candidates &= currentQuad))
+                            UBUBUBUBUBUBUBUBUB = currRowPos(i, n).candidates & currentQuad;
+                            if (currRowPos(i, n).candidates != (UBUBUBUBUBUBUBUBUB)) {
                                 somethingChanged = 1;
+                                currRowPos(i, n).candidates &= currentQuad;
+                            }
                         }
 
                     skipHiddenQuadRow:
@@ -839,9 +866,11 @@ int hiddenQuadsPass(Grid grid)
                         // Delete all other candidates from the cells containing the quad
                         for (n = 0; n < 9; n++) {
                             if (!((1 << n) & subsetOfQuadPresent[COLUMN])) continue;
-                            if (currColumnPos(i, n).candidates
-                                != (currColumnPos(i, n).candidates &= currentQuad))
+                            UBUBUBUBUBUBUBUBUB = currColumnPos(i, n).candidates & currentQuad;
+                            if (currColumnPos(i, n).candidates != (UBUBUBUBUBUBUBUBUB)) {
                                 somethingChanged = 1;
+                                currColumnPos(i, n).candidates &= currentQuad;
+                            }
                         }
 
                     skipHiddenQuadColumn:
@@ -882,9 +911,11 @@ int hiddenQuadsPass(Grid grid)
                         // Delete all other candidates from the cells containing the quad
                         for (n = 0; n < 9; n++) {
                             if (!((1 << n) & subsetOfQuadPresent[SUBGRID])) continue;
-                            if (currSubgridPos(i, n).candidates
-                                != (currSubgridPos(i, n).candidates &= currentQuad))
+                            UBUBUBUBUBUBUBUBUB = currSubgridPos(i, n).candidates & currentQuad;
+                            if (currSubgridPos(i, n).candidates != (UBUBUBUBUBUBUBUBUB)) {
                                 somethingChanged = 1;
+                                currSubgridPos(i, n).candidates &= currentQuad;
+                            }
                         }
 
                     skipHiddenQuadSubgrid:
@@ -978,6 +1009,8 @@ int intersectionRemovalBoxLineReductionPass(Grid grid)
 {
     bool somethingChanged = false;
     int i, j, k;
+    unsigned _BitInt(9) UBMoreLikeDB;
+
     // For every line and column
     for (i = 0; i < 9; i++) {
         // This variable holds every candidate that is inside of a subgrid the current line or
@@ -1009,10 +1042,13 @@ int intersectionRemovalBoxLineReductionPass(Grid grid)
                 for (k = 0; k < 9; k++) {
                     if (k >= i % 3 * 3 && k <= i % 3 * 3 + 2) continue;
                     if (!currSubgridPos(i / 3 * 3 + j, k).determined) {
-                        if (currSubgridPos(i / 3 * 3 + j, k).candidates
-                            != (currSubgridPos(i / 3 * 3 + j, k).candidates
-                                &= ~numbersOnlyInOneSubgrid[ROW]))
+                        UBMoreLikeDB = currSubgridPos(i / 3 * 3 + j, k).candidates
+                            & ~numbersOnlyInOneSubgrid[ROW];
+                        if (currSubgridPos(i / 3 * 3 + j, k).candidates != (UBMoreLikeDB)) {
                             somethingChanged = true;
+                            currSubgridPos(i / 3 * 3 + j, k).candidates
+                                &= ~numbersOnlyInOneSubgrid[ROW];
+                        }
                     }
                 }
             }
@@ -1023,10 +1059,13 @@ int intersectionRemovalBoxLineReductionPass(Grid grid)
                 for (k = 0; k < 9; k++) {
                     if (k == i % 3 || k == i % 3 + 3 || k == i % 3 + 6) continue;
                     if (!currSubgridPos(j * 3 + i / 3, k).determined) {
-                        if (currSubgridPos(j * 3 + i / 3, k).candidates
-                            != (currSubgridPos(j * 3 + i / 3, k).candidates
-                                &= ~numbersOnlyInOneSubgrid[COLUMN]))
+                        UBMoreLikeDB = currSubgridPos(j * 3 + i / 3, k).candidates
+                            & ~numbersOnlyInOneSubgrid[COLUMN];
+                        if (currSubgridPos(j * 3 + i / 3, k).candidates != (UBMoreLikeDB)) {
                             somethingChanged = true;
+                            currSubgridPos(j * 3 + i / 3, k).candidates
+                                &= ~numbersOnlyInOneSubgrid[COLUMN];
+                        }
                     }
                 }
             }

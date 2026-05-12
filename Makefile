@@ -1,6 +1,7 @@
+# TODO only compile necessary C files
 CC = gcc
 CFLAGS = -std=c23 -O3 -march=native
-CFLAGS_DEBUG = -std=c23 -g -Wall -Wextra -Wpedantic -fsanitize=address -fanalyzer
+CFLAGS_DEBUG = -std=c23 -g -Wall -Wextra -Wpedantic -fsanitize=address -fanalyzer -DDEBUG
 
 all: src/*.c src/*.h
 	mkdir -p out

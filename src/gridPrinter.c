@@ -24,7 +24,8 @@ void printGrid(Grid g, bool compact, FILE* output)
             = "╰───────┴───────┴───────┸───────┴───────┴───────┸───────┴───────┴───────╯\n";
 
         // Contains the formatted content of each cell rtl
-        char subCellContent[729][15];
+        // 10 found by «bruteforce» (thanks address sanitizer)
+        char subCellContent[729][10];
         char* cellValue;
         for (i = 0; i < 729; i++) {
             currCell = (i / 81) * 9 + (i % 27 / 3);
