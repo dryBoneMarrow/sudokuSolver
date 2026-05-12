@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "ANSIEscapeSequences.h"
 #include "sudoku.h"
@@ -8,47 +9,77 @@ void printGrid(Grid g, bool compact, FILE* output)
 // grid itself (wontfix because debug / testing only)
 {
     if (!compact) {
-        static unsigned char bigGrid[] = {
-#embed "bigGrid.txt"
-            , '\0'
-        };
-        printf("%s", bigGrid);
+        int i, j, currCell, positionInCell;
 
-        int i;
+        static char topLine[]
+            = "╭───────┬───────┬───────┰───────┬───────┬───────┰───────┬───────┬───────╮\n";
+        static char insideField[]
+            = "│ %s %s %s │ %s %s %s │ %s %s %s ┃ %s %s %s │ %s %s %s │ %s %s %s ┃ %s %s %s │ %s "
+              "%s %s │ %s %s %s │\n";
+        static char fieldSeperator[]
+            = "├───────┼───────┼───────╂───────┼───────┼───────╂───────┼───────┼───────┤\n";
+        static char fatFieldSeperator[]
+            = "┝━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━┥\n";
+        static char bottomLine[]
+            = "╰───────┴───────┴───────┸───────┴───────┴───────┸───────┴───────┴───────╯\n";
 
-        // Escape code magic
-        fprintf(output, CUR_SAVE_POSITION);
-        for (i = 0; i < 81; i++) {
-            fprintf(output, CUR_RESTORE_POSITION);
-            fprintf(output, CUR_GO_UP, 35 - (int)(i / 9) * 4);
-            fprintf(output, CUR_GO_RIGHT, 4 + (i % 9) * 8);
-            if (g[i].determined)
-                fprintf(output, BOLDD, g[i].number);
+        // Contains the formatted content of each cell rtl
+        char subCellContent[729][15];
+        char* cellValue;
+        for (i = 0; i < 729; i++) {
+            currCell = (i / 81) * 9 + (i % 27 / 3);
+            positionInCell = (i % 81 / 27) * 3 + i % 3;
+            // undetermied
+            if (!g[currCell].determined) {
+                if (g[currCell].candidates & 1 << positionInCell) {
+                    cellValue = FAINT_START "X" FAINT_END;
+                    strcpy(subCellContent[i], cellValue);
+                    subCellContent[i][4] = positionInCell + '1';
+                } else
+                    strcpy(subCellContent[i], " ");
+            }
+            // determined
             else {
-                if (g[i].candidates & 1 << 0)
-                    fprintf(output, CUR_GO_UP CUR_GO_LEFT FAINTD CUR_GO_DOWN CUR_GO_RIGHT, 1, 2, 1,
-                        1, 1);
-                if (g[i].candidates & 1 << 1)
-                    fprintf(output, CUR_GO_UP FAINTD CUR_GO_DOWN CUR_GO_LEFT, 1, 2, 1, 1);
-                if (g[i].candidates & 1 << 2)
-                    fprintf(output, CUR_GO_UP CUR_GO_RIGHT FAINTD CUR_GO_DOWN CUR_GO_LEFT, 1, 2, 3,
-                        1, 3);
-                if (g[i].candidates & 1 << 3)
-                    fprintf(output, CUR_GO_LEFT FAINTD CUR_GO_RIGHT, 2, 4, 1);
-                if (g[i].candidates & 1 << 4) fprintf(output, FAINTD CUR_GO_LEFT, 5, 1);
-                if (g[i].candidates & 1 << 5)
-                    fprintf(output, CUR_GO_RIGHT FAINTD CUR_GO_LEFT, 2, 6, 3);
-                if (g[i].candidates & 1 << 6)
-                    fprintf(output, CUR_GO_DOWN CUR_GO_LEFT FAINTD CUR_GO_UP CUR_GO_RIGHT, 1, 2, 7,
-                        1, 1);
-                if (g[i].candidates & 1 << 7)
-                    fprintf(output, CUR_GO_DOWN FAINTD CUR_GO_UP CUR_GO_LEFT, 1, 8, 1, 1);
-                if (g[i].candidates & 1 << 8)
-                    fprintf(output, CUR_GO_DOWN CUR_GO_RIGHT FAINTD CUR_GO_UP CUR_GO_LEFT, 1, 2, 9,
-                        1, 3);
+                // is middle of cell
+                if (positionInCell == 4) {
+                    cellValue = BOLD_START "X" BOLD_END;
+                    strcpy(subCellContent[i], cellValue);
+                    subCellContent[i][4] = g[currCell].number + '0';
+                } else {
+                    strcpy(subCellContent[i], " ");
+                }
             }
         }
-        fprintf(output, CUR_RESTORE_POSITION);
+
+        int currSubCell = 0;
+        fputs(topLine, output);
+        for (i = 1; i < 18; i++) {
+            if (i % 2) {
+                for (j = 0; j < 3; j++) {
+                    fprintf(output, insideField, subCellContent[currSubCell],
+                        subCellContent[currSubCell + 1], subCellContent[currSubCell + 2],
+                        subCellContent[currSubCell + 3], subCellContent[currSubCell + 4],
+                        subCellContent[currSubCell + 5], subCellContent[currSubCell + 6],
+                        subCellContent[currSubCell + 7], subCellContent[currSubCell + 8],
+                        subCellContent[currSubCell + 9], subCellContent[currSubCell + 10],
+                        subCellContent[currSubCell + 11], subCellContent[currSubCell + 12],
+                        subCellContent[currSubCell + 13], subCellContent[currSubCell + 14],
+                        subCellContent[currSubCell + 15], subCellContent[currSubCell + 16],
+                        subCellContent[currSubCell + 17], subCellContent[currSubCell + 18],
+                        subCellContent[currSubCell + 19], subCellContent[currSubCell + 20],
+                        subCellContent[currSubCell + 21], subCellContent[currSubCell + 22],
+                        subCellContent[currSubCell + 23], subCellContent[currSubCell + 24],
+                        subCellContent[currSubCell + 25], subCellContent[currSubCell + 26]);
+                    currSubCell += 27;
+                }
+            } else if (!(i % 6)) {
+                fputs(fatFieldSeperator, output);
+            } else {
+                fputs(fieldSeperator, output);
+            }
+        }
+        fputs(bottomLine, output);
+
     } else {
         fprintf(output,
             "╭───┬───┬───┰───┬───┬───┰───┬───┬───╮\n"

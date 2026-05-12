@@ -43,6 +43,8 @@ enum house { ROW, COLUMN, SUBGRID };
 // Spoiler of future me: Doesn't matter at all, if performance is important passes aren't used
 // anyways
 
+// TODO change all the UB (a==a++)
+
 //// Removes obvious non-candidates
 // e.g.: if 7 is already in the row, remove it as candidates in undetermined cells of this row
 int simpleCleanPass(Grid grid)

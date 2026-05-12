@@ -18,5 +18,5 @@ File format: One or more lines matching the following pattern: [0-9]{81}\n (0 de
 
 ## Misc
 gridPrinter.c may be interesting for others wanting to display a sudoku grid in the terminal, it supports two output formats:  
-![small grid format](smallGrid.png)  
-![big grid format including candidates](bigGrid.png)  
+![small grid format](misc/smallGrid.png)  
+![big grid format including candidates](misc/bigGrid.png)  
