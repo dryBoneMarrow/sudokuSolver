@@ -1,6 +1,6 @@
 # Sudoku Solver
 Requirements: compiler supporting C23  
-Optional requirement: Terminal supporting ANSI escape codes (including "CSI s" and "CSI u", for grid printer to look nice)
+Optional requirement: Terminal supporting ANSI escape codes (for grid printer to look nice)
 
 ## Approach
 All basic strategies from [sudokuwiki.org](https://www.sudokuwiki.org/) have been implemented, the fast enough ones are used in combination with backtracking to solve all (possible) sudokus.

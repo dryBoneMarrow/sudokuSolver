@@ -39,9 +39,6 @@ enum house { ROW, COLUMN, SUBGRID };
 
 // TODO most passes were written before they could report sudoku invalidity, performance would be
 // better if we'd catch the earlier (thus already in those passes) for backtracking
-//
-// Spoiler of future me: Doesn't matter at all, if performance is important passes aren't used
-// anyways
 
 //// Removes obvious non-candidates
 // e.g.: if 7 is already in the row, remove it as candidates in undetermined cells of this row
@@ -1142,8 +1139,7 @@ int runAllPasses(Grid grid)
     madeProgress |= intersectionRemovalBoxLineReductionPass(grid);
     madeProgress |= singleCandidateToDeterminedPass(grid);
     madeProgress |= isGridValidPass(grid);
-    // TODO
-    // [...]
+    // TODO [...]
 
     return madeProgress;
 }
