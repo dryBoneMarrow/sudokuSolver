@@ -1077,10 +1077,11 @@ int singleCandidateToDeterminedPass(Grid grid)
     int i;
     // Hopefully changes were catched earlier, but we never know
     bool somethingChanged = false;
+    unsigned _BitInt(9) currCandidate;
     for (i = 0; i < 81; i++) {
-        if (!grid[i].determined && stdc_has_single_bit(grid[i].candidates)) {
+        if (!grid[i].determined && stdc_has_single_bit(currCandidate = grid[i].candidates)) {
             grid[i].determined = true;
-            grid[i].number = stdc_first_trailing_one(grid[i].candidates);
+            grid[i].number = stdc_first_trailing_one(currCandidate);
             somethingChanged = true;
         }
     }

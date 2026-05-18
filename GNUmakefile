@@ -1,3 +1,5 @@
+#!/usr/bin/make -f
+
 CC = gcc
 CFLAGS = -std=c23 -O3 -march=native -MMD
 CFLAGS_DEBUG = -std=c23 -g -Wall -Wextra -Wpedantic -fsanitize=address,undefined -fanalyzer -DDEBUG -MMD
