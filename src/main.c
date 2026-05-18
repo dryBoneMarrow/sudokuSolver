@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "sudoku.h"
 
@@ -7,7 +8,7 @@
     fprintf(stderr,                                                                                \
         "Usage: %s [INPUT [OUTPUT]]\n       stdin and stdout are used by default\n\nFile format: " \
         "One or more lines matching the following pattern: [0-9]{81}\\n (0 denotes an unknown)\n", \
-        argv[0])
+        argv[0] ? argv[0] : "sudokuSolver")
 
 // problem is a string of at least 81 chars containing digits
 // Return code: >0 -> Success
@@ -35,7 +36,7 @@ int main(const int argc, char** argv)
 {
     FILE *input, *output;
     // No arguments -> stdin as input and stdout as output are used
-    if (argc == 1) {
+    if (argc <= 1) {
         input = stdin;
         output = stdout;
     }
