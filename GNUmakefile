@@ -12,7 +12,7 @@ sudokuSolver: $(addprefix $(OBJ_DIR), $(addsuffix .o, $(SRC)))
 
 sudokuSolverDebug: $(addprefix $(OBJ_DIR), $(addsuffix _debug.o, $(SRC)))
 	@mkdir -p $(OUT_DIR)
-	$(CC) $^ -o $(OUT_DIR)sudokuSolver_debug $(CFLAGS_DEBUG)
+	$(CC) $^ -o $(OUT_DIR)sudokuSolverDebug $(CFLAGS_DEBUG)
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c
 	@mkdir -p $(OBJ_DIR)
@@ -27,4 +27,4 @@ $(OBJ_DIR)%_debug.o: $(SRC_DIR)%.c
 clean:
 	rm -rf $(OUT_DIR) $(OBJ_DIR)
 
-.PHONY: sudokuSolver sudokuSolverDebug sudokuSolverDebug clean
+.PHONY: sudokuSolver sudokuSolverDebug clean

@@ -1,4 +1,5 @@
 #include "sudoku.h"
+#include <assert.h>
 #include <stdbit.h>
 
 // Return code:
@@ -61,8 +62,10 @@ int findCellWithLeastCandidates(Grid grid)
     }
     for (i = 2; i < 9; i++)
         if (found[i] >= 0) return found[i];
-    // Let's assume grid isn't solved because only stupid people would run this function on a
-    // completed grid
+
+#ifdef DEBUG
+    assert(0 && "Empty cell in grid with no empty cell searched");
+#endif
     return 67;
 }
 

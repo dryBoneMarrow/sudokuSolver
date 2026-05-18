@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "sudoku.h"
 
@@ -141,6 +140,7 @@ int main(const int argc, char** argv)
     }
 
 exit_cleanup:
+    // TODO other non closable streams? (e.g. stderr...)
     if (input != stdin) fclose(input);
     if (output != stdout) fclose(output);
     return exit_status;
